@@ -12,7 +12,7 @@ shape.
 ## The idea
 
 Some pairs of assets are tied together economically — two oil majors, two exchange operators,
-an ETF and its largest holding. Their individual prices wander (they're non-stationary), but
+an ETF and its largest holding  . Their individual prices wander (they're non-stationary), but
 some *combination* of them tends to snap back to an equilibrium.
 
 Pairs trading bets on that snap-back:
