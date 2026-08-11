@@ -12,7 +12,7 @@ shape.
 ## The idea
 
 Some pairs of assets are tied together economically — two oil majors, two exchange operators,
-an ETF and its largest holding  . Their individual prices wander (they're non-stationary), but
+an ETF and its largest holding. Their individual prices wander (they're non-stationary), but
 some *combination* of them tends to snap back to an equilibrium.
 
 Pairs trading bets on that snap-back:
@@ -71,41 +71,70 @@ paper.
 ```
 01-pairs-trading/
 ├── README.md
+├── RESULTS.md             # write-up: results, pitfalls checklist, next steps
 ├── requirements.txt
-├── run_backtest.py        # example driver script showing the intended API
+├── backtest.png           # z-score and equity curve from the milestone 6 run
 ├── src/
-│   ├── data.py            # data download + caching (complete — read it, don't rewrite it)
-│   ├── pairs.py           # TODO: hedge ratio, Engle-Granger test, pair scanning
-│   ├── signals.py         # TODO: spread, rolling z-score, position logic
-│   └── backtest.py        # TODO: vectorized backtest + performance metrics
+│   └── pairs.ipynb        # everything: milestones 1-6, with explanations inline
 └── tests/
+    ├── conftest.py        # fixtures + the loader that imports from the notebook
     ├── test_pairs.py
     ├── test_signals.py
     └── test_backtest.py
 ```
 
+All the code lives in one notebook. `tests/conftest.py` reads the notebook, executes
+its function-defining cells, and registers them as `src.pairs` / `src.signals` /
+`src.backtest`, so the test files import them exactly as they would a normal module.
+Cells marked `# skip-on-import` (the milestone 6 driver) are skipped, which keeps
+`pytest` from downloading data or drawing charts.
+
+## Extension: full-universe scan + interactive app
+
+The notebook is the teaching version (12 tickers). The scan scales the same method to
+the whole S&P 100 and puts the results behind a Streamlit app.
+
+```bash
+pip install -r requirements.txt
+python scan.py          # ~65s, caches downloads into data/ and writes results/
+streamlit run app.py
+```
+
+| File | What it does |
+|---|---|
+| `universe.py` | S&P 100 tickers tagged with GICS sectors |
+| `scan.py` | Downloads, scans all 4,950 pairs, backtests survivors out of sample |
+| `app.py` | Streamlit explorer: overview, verdict, per-pair charts, full table |
+| `results/` | Cached scan output the app reads |
+
+Formation 2013–2020, traded 2021–2025. Headline: **930 of 4,950 pairs passed at 5%**
+(248 expected by chance), **1 survived Bonferroni**, and out of sample the survivors
+averaged a Sharpe of **−0.009** with only **41.8% profitable**. Correlation between
+in-sample p-value and out-of-sample Sharpe: **−0.05**. The screen does not work — which
+is the point of building it.
+
 ## Build it: milestones
 
 Work in this order. Each milestone has matching tests.
 
-**Milestone 1 — Hedge ratio** (`src/pairs.py :: hedge_ratio`)
+**Milestone 1 — Hedge ratio** (`src/pairs.ipynb :: hedge_ratio`)
 OLS regression of y on x with an intercept. Return the slope. The test generates
 `y = 2.5 * x + noise` and checks you recover ~2.5.
-Run: `pytest tests/test_pairs.py -k hedge`
+Run: `python -m pytest tests/test_pairs.py -k hedge`
 
-**Milestone 2 — Cointegration test** (`src/pairs.py :: engle_granger_pvalue`)
+**Milestone 2 — Cointegration test** (`src/pairs.ipynb :: engle_granger_pvalue`)
 Regress, take residuals, ADF-test the residuals, return the p-value. The tests feed you one
 truly cointegrated synthetic pair and one pair of independent random walks — your function
 must tell them apart.
-Run: `pytest tests/test_pairs.py -k engle`
+Run: `python -m pytest tests/test_pairs.py -k engle`
 
-**Milestone 3 — Pair scanning** (`src/pairs.py :: find_cointegrated_pairs`)
+**Milestone 3 — Pair scanning** (`src/pairs.ipynb :: find_cointegrated_pairs`)
 Loop over all ticker combinations, test each, return pairs sorted by p-value. Think about
 the multiple-comparisons problem: test 50 tickers and you have 1,225 pairs — at a 5%
 threshold you expect ~60 false positives *by chance alone*. This is why pairs found by
 pure statistical scanning often fall apart out of sample.
 
-**Milestone 4 — Signals** (`src/signals.py`)
+**Milestone 4 — Signals** (`src/pairs.ipynb`)
 Compute the spread, the rolling z-score, and the position series (+1 long spread, -1 short,
 0 flat) using the entry/exit thresholds. Two things the tests check hard:
 
@@ -113,7 +142,7 @@ Compute the spread, the rolling z-score, and the position series (+1 long spread
 - Positions must be **shifted by one bar** before being applied to returns — you decide at
   today's close, you trade at tomorrow's. Forgetting `.shift(1)` inflates every backtest.
 
-**Milestone 5 — Backtest and metrics** (`src/backtest.py`)
+**Milestone 5 — Backtest and metrics** (`src/pairs.ipynb`)
 Compute daily strategy returns from positions and spread changes, subtract transaction
 costs on position *changes*, and produce an equity curve. Then implement the metrics
 every quant conversation assumes you know cold:
@@ -123,8 +152,8 @@ every quant conversation assumes you know cold:
 - **Total return** and **number of round trips**
 
 **Milestone 6 — Run it on real data**
-`run_backtest.py` downloads a small universe of related tickers, scans for pairs on a
-*formation window* (e.g., 2018–2021), then trades the best pair on a *later* window
+The driver cells at the bottom of `src/pairs.ipynb` download a small universe of related tickers, scan for pairs
+on a *formation window* (e.g., 2018–2021), then trade the best pair on a *later* window
 (2022–2024). Never scan and trade on the same data — that's in-sample selection, the
 subtler cousin of lookahead bias.
 

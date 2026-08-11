@@ -7,13 +7,14 @@ Signal: 60-day rolling z-score, entry |z| = 2.0, exit |z| = 0.5
 Costs: 5 bps per unit of position change, charged on both legs
 Risk-free rate assumed 0.
 
-All 20 tests pass (`pytest -q`).
+All 20 tests pass (`python -m pytest -q`). The code lives in `src/pairs.ipynb`;
+`tests/conftest.py` loads the notebook so the test files can import from it.
 
 ---
 
 ## Headline result
 
-`run_backtest.py` picks the lowest-p-value pair from the formation window and trades it:
+The driver cells in `src/pairs.ipynb` pick the lowest-p-value pair from the formation window and trade it:
 
 | Pair | beta | Total return | Sharpe | Max drawdown | Round trips |
 |---|---|---|---|---|---|
@@ -88,7 +89,7 @@ could have earned, in either direction. The bug is not "too good"; it is meaning
 
 ### In-sample selection
 The subtler cousin. Pairs are scanned on 2018–2021 and traded on 2022–2024, and beta is
-re-estimated on the formation window only — `run_backtest.py` explicitly uses
+re-estimated on the formation window only — the notebook explicitly uses
 `hedge_ratio(formation_prices[a], formation_prices[b])`, never the trading window, because
 fitting the hedge ratio on data you are about to trade leaks the future into the position size.
 
@@ -173,9 +174,9 @@ boundary and never hold through the reversion — which is where the entire prof
 ```bash
 pip install -r requirements.txt
 pytest -q              # 20 passed
-python run_backtest.py # writes backtest.png
+# then run src/pairs.ipynb top to bottom (writes backtest.png)
 ```
 
-Note on `src/pairs.ipynb`: the notebook draft defined `hedge_ratio(x, y)` while regressing y on
-x, so the parameter names were transposed relative to the call. `src/pairs.py` uses `(y, x)`
+Note on the earlier draft: it defined `hedge_ratio(x, y)` while regressing y on
+x, so the parameter names were transposed relative to the call. The notebook now uses `(y, x)`
 throughout, matching the tests and the rest of the pipeline.
