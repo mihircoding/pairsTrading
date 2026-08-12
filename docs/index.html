@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pairs Trading Lab — Statistical Arbitrage on the S&amp;P 100</title>
+<meta name="description" content="A cointegration screen tested honestly across 4,950 S&P 100 pairs: formation 2013-2020, traded out of sample 2021-2025. The screen does not work, and here is the evidence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfbfa; --surface:#fff; --line:#e5e4df; --line2:#d0cfc8;
+  --ink:#16161a; --ink2:#55554f; --ink3:#8b8a83;
+  --blue:#2a6fd6; --green:#12946a; --red:#d0413f; --amber:#b3760a;
+  --blue-bg:#eaf2fc; --green-bg:#e6f4ee; --red-bg:#fcecec; --amber-bg:#fdf3e3;
+  --radius:10px; --max:1120px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141414;--surface:#1c1c1b;--line:#2e2e2c;--line2:#3d3d3a;
+  --ink:#f2f2ef;--ink2:#b8b7b0;--ink3:#87867f;
+  --blue:#5b9bf0;--green:#3fbf90;--red:#ef6a68;--amber:#dfa03c;
+  --blue-bg:#17263a;--green-bg:#122a22;--red-bg:#331a1a;--amber-bg:#332715;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.88em}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+h1{font-size:38px;line-height:1.15;font-weight:600;letter-spacing:-.02em;margin:0 0 12px}
+h2{font-size:25px;font-weight:600;letter-spacing:-.015em;margin:0 0 6px}
+h3{font-size:17px;font-weight:600;margin:0 0 8px}
+p{margin:0 0 14px;color:var(--ink2)}
+section{padding:46px 0;border-top:1px solid var(--line)}
+.lede{font-size:18px;color:var(--ink2);max-width:70ch}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+header{padding:60px 0 46px}
+.tagline{display:inline-block;font-size:12.5px;font-weight:500;padding:4px 11px;border-radius:99px;
+  background:var(--red-bg);color:var(--red);margin-bottom:18px}
+.links{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:8px;
+  border:1px solid var(--line2);color:var(--ink);font-size:14px;font-weight:500;background:var(--surface)}
+.btn:hover{border-color:var(--ink3);text-decoration:none}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin:26px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px}
+.card .k{font-size:12px;color:var(--ink3);margin-bottom:5px;font-weight:500}
+.card .v{font-size:29px;font-weight:600;letter-spacing:-.02em;line-height:1.05}
+.card .s{font-size:12.5px;color:var(--ink3);margin-top:5px}
+.v.red{color:var(--red)} .v.green{color:var(--green)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+.chart{position:relative;height:210px;margin-top:4px}
+.cap{font-size:13px;color:var(--ink3);line-height:1.6;margin-top:10px}
+.note{border-left:3px solid var(--amber);background:var(--amber-bg);padding:13px 16px;border-radius:0 8px 8px 0;margin:18px 0}
+.note.blue{border-color:var(--blue);background:var(--blue-bg)}
+.note p{margin:0;color:var(--ink);font-size:14.5px}
+.note p+p{margin-top:9px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:600;color:var(--ink2);padding:9px 10px;border-bottom:1px solid var(--line2);
+  white-space:nowrap;font-size:12.5px}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--ink)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink2)}
+td.n{text-align:right;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+td strong{color:var(--ink);font-weight:600}
+.pos{color:var(--green)} .neg{color:var(--red)}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--blue-bg);color:var(--blue);font-weight:500}
+.pill.grey{background:var(--line);color:var(--ink3)}
+.ctl{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin-bottom:16px}
+.ctl label{display:block;font-size:12px;color:var(--ink3);margin-bottom:5px;font-weight:500}
+select,input[type=search]{padding:7px 10px;border:1px solid var(--line2);border-radius:7px;
+  background:var(--surface);color:var(--ink);font-size:13.5px;font-family:inherit}
+.slider{min-width:150px}
+.slider .row{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);margin-bottom:4px;font-weight:500}
+.slider .row b{color:var(--ink);font-family:"JetBrains Mono",monospace}
+input[type=range]{width:100%;accent-color:var(--blue)}
+.scroll{overflow-x:auto}
+.pager{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:13px;color:var(--ink3)}
+.pager button{padding:5px 11px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);
+  border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit}
+.pager button:disabled{opacity:.4;cursor:default}
+ul{color:var(--ink2);padding-left:20px;margin:0 0 14px}
+li{margin-bottom:7px}
+footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);font-size:13.5px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="wrap">
+  <div class="tagline">Negative result — reported in full</div>
+  <h1>Pairs Trading Lab</h1>
+  <p class="lede">A cointegration screen run across every pair in the S&amp;P 100, then traded on data it was never selected on. <strong style="color:var(--ink)">930 of 4,950 pairs passed the statistical test. Out of sample they averaged a Sharpe ratio of &minus;0.009.</strong> This site documents why, and what the screen would need to be worth trusting.</p>
+  <div class="links">
+    <a class="btn primary" href="#explorer">Explore the data</a>
+    <a class="btn" href="https://github.com/mihircoding/pairsTrading/tree/main/01-pairs-trading">Source on GitHub</a>
+    <a class="btn" href="https://github.com/mihircoding/pairsTrading/blob/main/01-pairs-trading/src/pairs.ipynb">Notebook</a>
+  </div>
+</div>
+</header>
+
+<section>
+<div class="wrap">
+  <div class="eyebrow">Method</div>
+  <h2>How it was tested</h2>
+  <p class="lede">Pairs trading bets that two related securities which drift apart will converge. The hard part is not the trade — it is proving the relationship exists, and not fooling yourself while you look.</p>
+  <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+    <div class="card"><div class="k">Universe</div><div class="v" style="font-size:20px">S&amp;P 100</div><div class="s">100 tickers survived the history filter</div></div>
+    <div class="card"><div class="k">Formation window</div><div class="v" style="font-size:20px">2013&ndash;2020</div><div class="s">pairs selected here only</div></div>
+    <div class="card"><div class="k">Trading window</div><div class="v" style="font-size:20px">2021&ndash;2025</div><div class="s">never seen during selection</div></div>
+    <div class="card"><div class="k">Signal</div><div class="v" style="font-size:20px">60d z-score</div><div class="s">entry |z|=2.0, exit |z|=0.5, 5bps</div></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <h3>The pipeline</h3>
+      <ul>
+        <li><strong style="color:var(--ink)">Hedge ratio</strong> — OLS of one leg on the other; the slope is how many shares hedge one share.</li>
+        <li><strong style="color:var(--ink)">Engle-Granger test</strong> — ADF on the regression residual. A low p-value rejects "this spread is a random walk".</li>
+        <li><strong style="color:var(--ink)">Scan</strong> — all 4,950 unordered pairs, ranked by p-value.</li>
+        <li><strong style="color:var(--ink)">Signal</strong> — rolling z-score, with a state machine for entry/exit hysteresis.</li>
+        <li><strong style="color:var(--ink)">Backtest</strong> — equal-dollar legs, costs on every position change.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The three honesty constraints</h3>
+      <ul>
+        <li><strong style="color:var(--ink)">No lookahead</strong> — the z-score uses a rolling window that ends at <span class="mono">t</span>, never the full-sample mean. Verified: truncating the series leaves earlier values bit-identical.</li>
+        <li><strong style="color:var(--ink)">Positions lag by one bar</strong> — <span class="mono">positions.shift(1)</span>. You decide at today's close and earn tomorrow's return.</li>
+        <li><strong style="color:var(--ink)">Selection and testing are separated</strong> — pairs and betas come from the formation window; performance is measured only on the trading window.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+  <div class="eyebrow">Result</div>
+  <h2>The screen does not work</h2>
+  <p class="lede">Every pair that passed at the 5% threshold was traded out of sample. Here is what happened to all 930 of them.</p>
+  <div class="cards">
+    <div class="card"><div class="k">Pairs tested</div><div class="v" id="m-tests">—</div><div class="s">100 tickers, all combinations</div></div>
+    <div class="card"><div class="k">Passed at 5%</div><div class="v" id="m-passed">—</div><div class="s" id="m-passed-s">—</div></div>
+    <div class="card"><div class="k">Survive Bonferroni</div><div class="v" id="m-bonf">—</div><div class="s" id="m-bonf-s">—</div></div>
+    <div class="card"><div class="k">Mean OOS Sharpe</div><div class="v red" id="m-sharpe">—</div><div class="s">across all survivors</div></div>
+    <div class="card"><div class="k">Profitable</div><div class="v" id="m-win">—</div><div class="s">worse than a coin flip</div></div>
+    <div class="card"><div class="k">Still cointegrated</div><div class="v" id="m-coint">—</div><div class="s">in the trading window</div></div>
+  </div>
+
+  <div class="note">
+    <p><strong>Multiple comparisons is the whole story.</strong> Running 4,950 tests at a 5% threshold means roughly 248 pairs pass on luck alone, before any real relationship exists. Correcting for that — Bonferroni, p &le; 0.05/4,950 = 1.01&times;10<sup>&minus;5</sup> — leaves exactly one pair standing.</p>
+    <p>930 passed, which is more than 248. That gap is not 682 discoveries: large-cap equities share market-wide factors, so many pairs co-move enough to fool a test built on an independence assumption.</p>
+  </div>
+
+  <div class="grid2" style="margin-top:26px">
+    <div class="panel">
+      <h3>Where the p-values landed</h3>
+      <div class="chart"><canvas id="c-pv"></canvas></div>
+      <p class="cap">Under a true null these would be flat across [0,1]. The pile-up near zero is partly genuine co-movement and partly the ADF test being too permissive when beta is estimated rather than known.</p>
+    </div>
+    <div class="panel">
+      <h3>Out-of-sample Sharpe, all 930</h3>
+      <div class="chart"><canvas id="c-sh"></canvas></div>
+      <p class="cap" id="cap-sh">—</p>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:26px">
+    <div class="panel">
+      <h3>Does a lower p-value predict a better trade?</h3>
+      <div class="chart" style="height:190px"><canvas id="c-q"></canvas></div>
+      <p class="cap" id="cap-q">—</p>
+    </div>
+    <div class="panel">
+      <h3>Same sector vs cross sector</h3>
+      <div class="scroll"><table id="t-sector"><thead><tr><th>Group</th><th class="n">Pairs</th><th class="n">Mean Sharpe</th><th class="n">Profitable</th><th class="n">Mean return</th></tr></thead><tbody></tbody></table></div>
+      <p class="cap">A crude proxy for "is there an economic reason these two should track". Same-sector pairs did <em>worse</em> — see the caveats below.</p>
+    </div>
+  </div>
+
+  <div class="note blue">
+    <p><strong>This contradicts what the small-scale version of this project suggested.</strong> On a 12-ticker universe the pair with a real economic story (Mastercard/Visa, a payments duopoly) beat the coincidence that topped the p-value ranking, and the tidy conclusion was "require an economic reason". At 100 tickers, same-sector pairs underperformed cross-sector ones.</p>
+    <p>Two caveats keep me from over-reading that reversal: only 119 same-sector pairs exist here, and GICS sector is a blunt instrument that files Berkshire Hathaway and Visa under the same heading. The defensible claim is that this particular filter does not rescue the strategy — not that economic reasoning is worthless.</p>
+  </div>
+</div>
+</section>
+
+<section id="explorer">
+<div class="wrap">
+  <div class="eyebrow">Interactive</div>
+  <h2>Pair explorer</h2>
+  <p class="lede">Every backtest below is recomputed in your browser from daily prices. Change the parameters and watch the "best" pair stop looking good.</p>
+
+  <div class="ctl">
+    <div><label for="sel-pair">Pair (sorted by out-of-sample Sharpe)</label>
+      <select id="sel-pair" style="min-width:320px"></select></div>
+    <div class="slider"><div class="row"><span>z-score window</span><b id="v-win">60</b></div>
+      <input type="range" id="s-win" min="20" max="250" step="5" value="60"></div>
+    <div class="slider"><div class="row"><span>entry |z|</span><b id="v-entry">2.0</b></div>
+      <input type="range" id="s-entry" min="0.5" max="4" step="0.1" value="2"></div>
+    <div class="slider"><div class="row"><span>exit |z|</span><b id="v-exit">0.5</b></div>
+      <input type="range" id="s-exit" min="0" max="2" step="0.1" value="0.5"></div>
+    <div class="slider"><div class="row"><span>cost (bps)</span><b id="v-cost">5</b></div>
+      <input type="range" id="s-cost" min="0" max="25" step="0.5" value="5"></div>
+    <div><button class="btn" id="reset">Reset</button></div>
+  </div>
+
+  <div class="cards" style="margin-top:6px">
+    <div class="card"><div class="k">Total return</div><div class="v" id="e-ret">—</div></div>
+    <div class="card"><div class="k">Sharpe</div><div class="v" id="e-sh">—</div></div>
+    <div class="card"><div class="k">Max drawdown</div><div class="v" id="e-dd">—</div></div>
+    <div class="card"><div class="k">Round trips</div><div class="v" id="e-rt">—</div></div>
+    <div class="card"><div class="k">Hedge ratio &beta;</div><div class="v" id="e-beta">—</div><div class="s">from formation window</div></div>
+    <div class="card"><div class="k">p out of sample</div><div class="v" id="e-po">—</div><div class="s" id="e-po-s">—</div></div>
+  </div>
+
+  <div class="panel" style="margin-top:20px">
+    <h3 id="e-title">—</h3>
+    <div class="chart" style="height:200px"><canvas id="c-z"></canvas></div>
+    <div class="chart" style="height:70px;margin-top:8px"><canvas id="c-pos"></canvas></div>
+    <div class="chart" style="height:200px;margin-top:8px"><canvas id="c-eq"></canvas></div>
+    <p class="cap">&beta; is fixed at its formation-window value and never re-estimated on the trading window — re-fitting it here would leak the future into position sizes. Moving these sliders re-runs the backtest, which is itself the lesson: hunt long enough for parameters that flatter one pair and you are overfitting in real time.</p>
+  </div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+  <div class="eyebrow">Data</div>
+  <h2>All 930 pairs</h2>
+  <div class="ctl">
+    <div><label for="f-sector">Sector relationship</label>
+      <select id="f-sector"><option value="all">All</option><option value="same">Same sector</option><option value="cross">Cross sector</option></select></div>
+    <div><label for="f-coint">Out-of-sample status</label>
+      <select id="f-coint"><option value="all">All</option><option value="yes">Still cointegrated</option><option value="no">Relationship broke</option></select></div>
+    <div><label for="f-search">Search ticker</label>
+      <input type="search" id="f-search" placeholder="e.g. AAPL"></div>
+    <div style="margin-left:auto;font-size:13px;color:var(--ink3)" id="t-count">—</div>
+  </div>
+  <div class="scroll">
+    <table id="t-main">
+      <thead><tr>
+        <th class="sortable" data-k="a">Pair</th>
+        <th>Sectors</th>
+        <th class="sortable n" data-k="beta">&beta;</th>
+        <th class="sortable n" data-k="p">p in</th>
+        <th class="sortable n" data-k="po">p out</th>
+        <th class="sortable n" data-k="ret">Return</th>
+        <th class="sortable n" data-k="sh">Sharpe</th>
+        <th class="sortable n" data-k="dd">Max DD</th>
+        <th class="sortable n" data-k="rt">Trips</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <button id="prev">Previous</button><button id="next">Next</button>
+    <span id="pinfo">—</span>
+  </div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+  <div class="eyebrow">Caveats</div>
+  <h2>What would have to change to trust this</h2>
+  <div class="grid2">
+    <div>
+      <h3>Known biases still present</h3>
+      <ul>
+        <li><strong style="color:var(--ink)">Survivorship</strong> — this is the S&amp;P 100 as it stands today. Membership is awarded for having already grown large, so testing from 2013 asks how today's winners behaved on the way to winning. Firms that collapsed or were acquired are absent. Fixing it needs a point-in-time constituent list (CRSP, Compustat).</li>
+        <li><strong style="color:var(--ink)">Parameter selection</strong> — the 60-day window and 2.0/0.5 thresholds were chosen by convention, not fitted, but they were chosen by someone who knows how this period played out.</li>
+        <li><strong style="color:var(--ink)">Costs are optimistic</strong> — 5bps ignores short-borrow cost on one leg, a continuous drag on any market-neutral book.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Modelling choices worth defending</h3>
+      <ul>
+        <li><strong style="color:var(--ink)">Equal dollar legs, not beta-weighted</strong> — &beta; defines the spread the signal is built on, but weighting positions by it needs daily rebalancing whose weights drift and whose trades cost money.</li>
+        <li><strong style="color:var(--ink)">ADF is too permissive here</strong> — because &beta; is estimated, the residual is already optimised to look stationary. <span class="mono">statsmodels.coint()</span> uses stricter Engle-Granger critical values and consistently returns larger p-values.</li>
+        <li><strong style="color:var(--ink)">Lag search capped at 12</strong> — uncapped, AIC considers ~23 lags for this sample. Capping cut cost per test from 45ms to 11ms with near-identical answers. A speed/rigour trade, documented rather than hidden.</li>
+      </ul>
+    </div>
+  </div>
+  <h3 style="margin-top:22px">Next steps that would actually help</h3>
+  <ul>
+    <li>Point-in-time universe to kill survivorship bias — the single largest unfixed problem.</li>
+    <li>Benjamini-Hochberg false-discovery control instead of Bonferroni, which is brutal at 4,950 tests.</li>
+    <li>Half-life of mean reversion (an Ornstein-Uhlenbeck fit) to set the z-score window from the data rather than by convention.</li>
+    <li>Walk-forward re-estimation of &beta; each quarter instead of freezing a 2020 value for five years.</li>
+    <li>Kalman-filter hedge ratio, so &beta; adapts as the relationship drifts.</li>
+  </ul>
+</div>
+</section>
+
+<footer>
+<div class="wrap">
+  <p style="margin:0">Built by Mihir Konda · <a href="https://github.com/mihircoding/pairsTrading">github.com/mihircoding/pairsTrading</a> · Python, statsmodels, pandas. Backtests on this page recompute client-side in JavaScript from daily adjusted closes. Data: Yahoo Finance. Not investment advice.</p>
+</div>
+</footer>
+
+<script src="data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const D = window.DATA, S = D.summary, M = D.meta;
+const $ = id => document.getElementById(id);
+const fmtPct = v => (v>=0?'+':'') + (v*100).toFixed(2) + '%';
+const fmtP = v => v < 1e-4 ? v.toExponential(2) : v.toFixed(4);
+
+// ---------- backtest engine (mirrors scan.py exactly) ----------
+function rollingZ(spread, w){
+  const n = spread.length, z = new Array(n).fill(NaN);
+  let sum = 0, sumsq = 0;
+  for (let i = 0; i < n; i++){
+    sum += spread[i]; sumsq += spread[i]*spread[i];
+    if (i >= w){ sum -= spread[i-w]; sumsq -= spread[i-w]*spread[i-w]; }
+    if (i >= w-1){
+      const mean = sum/w;
+      const varr = (sumsq - w*mean*mean)/(w-1);   // ddof=1, matches pandas
+      z[i] = varr > 0 ? (spread[i]-mean)/Math.sqrt(varr) : NaN;
+    }
+  }
+  return z;
+}
+function positions(z, entry, exit){
+  const n = z.length, p = new Array(n).fill(0);
+  let st = 0;
+  for (let i = 0; i < n; i++){
+    const v = z[i];
+    if (Number.isNaN(v)) st = 0;
+    else if (st === 0){ if (v > entry) st = -1; else if (v < -entry) st = 1; }
+    else if (st === 1){ if (v >= -exit) st = 0; }
+    else { if (v <= exit) st = 0; }
+    p[i] = st;
+  }
+  return p;
+}
+function backtest(y, x, pos, bps){
+  const n = y.length, ret = new Array(n).fill(0), eq = new Array(n).fill(1);
+  let cum = 1;
+  for (let i = 0; i < n; i++){
+    let r = 0;
+    if (i > 0){
+      const ry = y[i]/y[i-1]-1, rx = x[i]/x[i-1]-1;
+      r = pos[i-1]*(ry-rx)/2;
+    }
+    const turn = i === 0 ? Math.abs(pos[0]) : Math.abs(pos[i]-pos[i-1]);
+    const net = r - turn*(bps/10000);
+    ret[i] = net; cum *= (1+net); eq[i] = cum;
+  }
+  return {ret, eq};
+}
+function stats(ret, eq, pos){
+  const n = ret.length;
+  const mean = ret.reduce((a,b)=>a+b,0)/n;
+  let sq = 0; for (const r of ret) sq += (r-mean)*(r-mean);
+  const sd = Math.sqrt(sq/(n-1));
+  const sharpe = sd > 0 ? mean/sd*Math.sqrt(252) : 0;
+  let peak = -Infinity, dd = 0;
+  for (const v of eq){ if (v > peak) peak = v; const d = v/peak-1; if (d < dd) dd = d; }
+  let trips = 0;
+  for (let i = 1; i < n; i++) if (pos[i-1] !== 0 && pos[i] === 0) trips++;
+  return {ret: eq[n-1]-1, sharpe, dd, trips};
+}
+function runPair(a, b, beta, w, entry, exit, bps){
+  const y = D.prices[a], x = D.prices[b];
+  const spread = y.map((v,i)=>v - beta*x[i]);
+  const z = rollingZ(spread, w);
+  const pos = positions(z, entry, exit);
+  const {ret, eq} = backtest(y, x, pos, bps);
+  return {z, pos, eq, stats: stats(ret, eq, pos)};
+}
+
+// ---------- headline metrics ----------
+$('m-tests').textContent = M.n_tests.toLocaleString();
+$('m-passed').textContent = M.n_passed.toLocaleString();
+$('m-passed-s').textContent = Math.round(M.expected_false_positives) + ' expected by chance';
+$('m-bonf').textContent = M.n_bonferroni;
+$('m-bonf-s').textContent = 'p ≤ ' + M.bonferroni_threshold.toExponential(2);
+$('m-sharpe').textContent = (S.meanSharpe>=0?'+':'') + S.meanSharpe.toFixed(3);
+$('m-win').textContent = (S.winRate*100).toFixed(1) + '%';
+$('m-coint').textContent = (S.stillCoint*100).toFixed(1) + '%';
+$('cap-sh').innerHTML = 'Centred on zero with standard deviation ' + S.sdSharpe.toFixed(2) +
+  '. Only <strong>' + S.nOver1 + ' of 930</strong> cleared Sharpe 1 — about what a distribution this shape produces on its own. The tail is arithmetic, not discovery.';
+$('cap-q').innerHTML = 'Correlation between in-sample p-value and out-of-sample Sharpe: <strong>' +
+  S.corrPSharpe.toFixed(3) + '</strong>. Ranking candidates by statistical significance does not sort them by how well they trade.';
+
+const sec = D.sector;
+$('t-sector').querySelector('tbody').innerHTML =
+  [['Same sector', sec.same], ['Cross sector', sec.cross]].map(([n,v]) =>
+  `<tr><td><strong>${n}</strong></td><td class="n">${v.n}</td>
+   <td class="n ${v.ms>=0?'pos':'neg'}">${v.ms>=0?'+':''}${v.ms.toFixed(3)}</td>
+   <td class="n">${(v.win*100).toFixed(1)}%</td>
+   <td class="n ${v.mr>=0?'pos':'neg'}">${fmtPct(v.mr)}</td></tr>`).join('');
+
+// ---------- charts ----------
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const GRID = css('--line'), TICK = css('--ink3');
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.font.size = 11;
+const baseOpts = () => ({responsive:true, maintainAspectRatio:false, animation:false,
+  plugins:{legend:{display:false}},
+  scales:{x:{grid:{display:false},ticks:{color:TICK,maxRotation:0,autoSkip:true,maxTicksLimit:8}},
+          y:{grid:{color:GRID},ticks:{color:TICK},border:{display:false}}}});
+
+new Chart($('c-pv'), {type:'bar', data:{
+  labels: D.charts.pvHist.map((_,i)=>(i*0.04).toFixed(2)),
+  datasets:[{data:D.charts.pvHist, borderRadius:2,
+    backgroundColor: D.charts.pvHist.map((_,i)=> i<2 ? css('--red') : css('--blue'))}]},
+  options: baseOpts()});
+
+new Chart($('c-sh'), {type:'bar', data:{
+  labels: D.charts.shHist.map((_,i)=>(-1.5+i*0.12).toFixed(1)),
+  datasets:[{data:D.charts.shHist, backgroundColor:css('--blue'), borderRadius:2}]},
+  options: baseOpts()});
+
+new Chart($('c-q'), {type:'bar', data:{
+  labels: D.charts.quintLabels,
+  datasets:[{data:D.charts.quint, borderRadius:2,
+    backgroundColor: D.charts.quint.map(v=> v>0 ? css('--green') : css('--red'))}]},
+  options: {...baseOpts(), scales:{...baseOpts().scales,
+    y:{...baseOpts().scales.y, min:-0.05, max:0.05}}}});
+
+// ---------- explorer ----------
+const ranked = [...D.pairs].sort((p,q)=>q.sh-p.sh);
+const sel = $('sel-pair');
+sel.innerHTML = ranked.map((p,i)=>
+  `<option value="${i}">${p.a}/${p.b} — Sharpe ${p.sh>=0?'+':''}${p.sh.toFixed(2)}, p=${fmtP(p.p)}</option>`).join('');
+
+let zChart, posChart, eqChart;
+function draw(){
+  const p = ranked[+sel.value];
+  const w = +$('s-win').value, entry = +$('s-entry').value,
+        exit = +$('s-exit').value, bps = +$('s-cost').value;
+  $('v-win').textContent = w; $('v-entry').textContent = entry.toFixed(1);
+  $('v-exit').textContent = exit.toFixed(1); $('v-cost').textContent = bps;
+
+  const r = runPair(p.a, p.b, p.beta, w, entry, exit, bps), st = r.stats;
+  $('e-ret').textContent = fmtPct(st.ret);
+  $('e-ret').className = 'v ' + (st.ret>=0?'green':'red');
+  $('e-sh').textContent = (st.sharpe>=0?'+':'') + st.sharpe.toFixed(3);
+  $('e-sh').className = 'v ' + (st.sharpe>=0?'green':'red');
+  $('e-dd').textContent = (st.dd*100).toFixed(2)+'%';
+  $('e-rt').textContent = st.trips;
+  $('e-beta').textContent = p.beta.toFixed(3);
+  $('e-po').textContent = fmtP(p.po);
+  $('e-po-s').textContent = p.po < 0.05 ? 'still cointegrated' : 'relationship broke';
+  $('e-po').className = 'v ' + (p.po<0.05?'green':'red');
+  $('e-title').textContent = `${p.a} (${p.sa})  vs  ${p.b} (${p.sb})`;
+
+  const lab = D.dates;
+  if (zChart) { zChart.destroy(); posChart.destroy(); eqChart.destroy(); }
+
+  zChart = new Chart($('c-z'), {type:'line', data:{labels:lab, datasets:[
+    {data:r.z, borderColor:css('--blue'), borderWidth:1.2, pointRadius:0, spanGaps:false},
+    {data:lab.map(()=>entry), borderColor:css('--red'), borderWidth:1, borderDash:[4,4], pointRadius:0},
+    {data:lab.map(()=>-entry), borderColor:css('--red'), borderWidth:1, borderDash:[4,4], pointRadius:0},
+    {data:lab.map(()=>0), borderColor:GRID, borderWidth:1, pointRadius:0}]},
+    options:{...baseOpts(), plugins:{legend:{display:false},
+      title:{display:true, text:'Rolling z-score of the spread', color:TICK, align:'start', font:{size:11}}}}});
+
+  posChart = new Chart($('c-pos'), {type:'line', data:{labels:lab, datasets:[
+    {data:r.pos, borderColor:css('--amber'), backgroundColor:css('--amber-bg'),
+     borderWidth:1, pointRadius:0, fill:true, stepped:true}]},
+    options:{...baseOpts(), scales:{x:{display:false},
+      y:{min:-1.4,max:1.4,ticks:{stepSize:1,color:TICK},grid:{color:GRID},border:{display:false}}},
+      plugins:{legend:{display:false},
+      title:{display:true, text:'Position (+1 long spread, −1 short)', color:TICK, align:'start', font:{size:11}}}}});
+
+  eqChart = new Chart($('c-eq'), {type:'line', data:{labels:lab, datasets:[
+    {data:r.eq, borderColor:css('--green'), borderWidth:1.5, pointRadius:0},
+    {data:lab.map(()=>1), borderColor:GRID, borderWidth:1, borderDash:[4,4], pointRadius:0}]},
+    options:{...baseOpts(), plugins:{legend:{display:false},
+      title:{display:true, text:'Growth of $1, net of costs', color:TICK, align:'start', font:{size:11}}}}});
+}
+['sel-pair','s-win','s-entry','s-exit','s-cost'].forEach(id=>$(id).addEventListener('input', draw));
+$('reset').addEventListener('click', ()=>{
+  $('s-win').value=60; $('s-entry').value=2; $('s-exit').value=0.5; $('s-cost').value=5; draw();});
+
+// ---------- table ----------
+let sortK = 'sh', sortAsc = false, page = 0;
+const PER = 25;
+function filtered(){
+  const fs = $('f-sector').value, fc = $('f-coint').value,
+        q = $('f-search').value.trim().toUpperCase();
+  return D.pairs.filter(p =>
+    (fs === 'all' || (fs === 'same') === p.ss) &&
+    (fc === 'all' || (fc === 'yes') === (p.po < 0.05)) &&
+    (!q || p.a.includes(q) || p.b.includes(q))
+  ).sort((x,y)=>{
+    const a = x[sortK], b = y[sortK];
+    const c = typeof a === 'string' ? a.localeCompare(b) : a-b;
+    return sortAsc ? c : -c;
+  });
+}
+function renderTable(){
+  const rows = filtered();
+  const maxPage = Math.max(0, Math.ceil(rows.length/PER)-1);
+  page = Math.min(page, maxPage);
+  const slice = rows.slice(page*PER, page*PER+PER);
+  $('t-main').querySelector('tbody').innerHTML = slice.map(p=>`<tr>
+    <td><strong>${p.a}/${p.b}</strong></td>
+    <td><span class="pill ${p.ss?'':'grey'}">${p.ss?'same':'cross'}</span>
+        <span style="font-size:12px;color:var(--ink3)"> ${p.sa} · ${p.sb}</span></td>
+    <td class="n">${p.beta.toFixed(3)}</td>
+    <td class="n">${fmtP(p.p)}</td>
+    <td class="n ${p.po<0.05?'pos':'neg'}">${fmtP(p.po)}</td>
+    <td class="n ${p.ret>=0?'pos':'neg'}">${fmtPct(p.ret)}</td>
+    <td class="n ${p.sh>=0?'pos':'neg'}">${p.sh>=0?'+':''}${p.sh.toFixed(3)}</td>
+    <td class="n">${(p.dd*100).toFixed(1)}%</td>
+    <td class="n">${p.rt}</td></tr>`).join('');
+  $('t-count').textContent = rows.length.toLocaleString() + ' pairs';
+  $('pinfo').textContent = `Page ${page+1} of ${maxPage+1}`;
+  $('prev').disabled = page === 0; $('next').disabled = page >= maxPage;
+}
+document.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click',()=>{
+  const k = th.dataset.k;
+  if (k === sortK) sortAsc = !sortAsc; else { sortK = k; sortAsc = (k === 'p' || k === 'a'); }
+  page = 0; renderTable();}));
+['f-sector','f-coint','f-search'].forEach(id=>$(id).addEventListener('input',()=>{page=0;renderTable();}));
+$('prev').addEventListener('click',()=>{page--;renderTable();});
+$('next').addEventListener('click',()=>{page++;renderTable();});
+
+draw(); renderTable();
+</script>
+</body>
+</html>
