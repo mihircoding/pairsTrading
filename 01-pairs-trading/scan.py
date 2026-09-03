@@ -1,20 +1,3 @@
-"""Full-universe pair scan: S&P 100, formation 2013-2020, trading 2021-2025.
-
-This is the 12-ticker notebook experiment scaled up ~75x. Same functions, same
-rules, same honesty constraints -- just enough pairs that the multiple-comparisons
-problem stops being a footnote and becomes the headline.
-
-    python scan.py
-
-Writes results/ (prices + scan table) which app.py reads. Downloads are cached,
-so the second run is fast.
-
-Method, unchanged from the notebook:
-  1. Scan for cointegration on the FORMATION window only.
-  2. Estimate beta on the FORMATION window only.
-  3. Trade on the TRADING window, which the pair was never selected on.
-  4. Charge costs on every position change.
-"""
 
 from __future__ import annotations
 
@@ -37,17 +20,13 @@ RESULTS = ROOT / "results"
 FORMATION = ("2013-01-01", "2020-12-31")
 TRADING = ("2021-01-01", "2025-12-31")
 
-MIN_FORMATION_DAYS = 1000   # ~4 years; below this the ADF test is not worth trusting
-ADF_MAXLAG = 12             # see beta_and_pvalue for why this cap exists
+MIN_FORMATION_DAYS = 1000   # ~4 years; below this the ADF test doesnt wokr
+ADF_MAXLAG = 12             # uncapped AIC picks ~23 lags and is 4x slower. barely changes p
 ZSCORE_WINDOW = 60
 ENTRY, EXIT = 2.0, 0.5
 COST_BPS = 5.0
 TRADING_DAYS = 252
 
-
-# --------------------------------------------------------------------------
-# Data
-# --------------------------------------------------------------------------
 
 def load_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     CACHE.mkdir(exist_ok=True)
@@ -68,13 +47,7 @@ def load_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
 
 
 def clean(prices: pd.DataFrame, min_days: int) -> pd.DataFrame:
-    """Drop thin tickers first, THEN drop incomplete days.
-
-    Order matters enormously. `dropna(how="any")` on the raw frame would delete
-    every date on which any single ticker was missing -- one 2015 IPO would wipe
-    out 2013-2015 for all 100 names. So we discard columns that are too sparse to
-    test, and only then align what remains onto common dates.
-    """
+    
     keep = [c for c in prices.columns if prices[c].notna().sum() >= min_days]
     dropped = sorted(set(prices.columns) - set(keep))
     if dropped:
@@ -82,31 +55,14 @@ def clean(prices: pd.DataFrame, min_days: int) -> pd.DataFrame:
     return prices[keep].dropna(how="any")
 
 
-# --------------------------------------------------------------------------
-# Milestones 1-2, fused for speed
-# --------------------------------------------------------------------------
+
 
 def hedge_ratio(y: pd.Series, x: pd.Series) -> float:
     return float(sm.OLS(y, sm.add_constant(x)).fit().params.iloc[1])
 
 
 def beta_and_pvalue(y: np.ndarray, x: np.ndarray) -> tuple[float, float]:
-    """Engle-Granger in one pass, returning (beta, adf_pvalue).
-
-    Identical maths to the notebook's hedge_ratio + engle_granger_pvalue, but it
-    fits the regression once instead of twice. At 4,950 pairs that halves the
-    OLS work, and numpy's lstsq avoids building a statsmodels results object we
-    would immediately throw away.
-
-    ADF_MAXLAG caps how many lags AIC is allowed to consider. Left uncapped,
-    statsmodels follows Schwert's rule -- 12*(n/100)^(1/4), about 23 lags for a
-    1,384-day window -- and each extra candidate is another regression. Capping
-    at 12 cuts the cost per test from ~45ms to ~11ms, which is the difference
-    between a 4-minute scan and a 1-minute one. Measured effect on the answer
-    is small (AAPL/MSFT: p=0.8461 uncapped vs 0.8546 capped) and 12 lags is a
-    common practitioner default on daily data, but it IS a methodological
-    choice and it belongs in the write-up rather than buried in the code.
-    """
+    # same maths as the notebook, but one regression instead of two
     design = np.column_stack([np.ones(len(x)), x])
     coef, *_ = np.linalg.lstsq(design, y, rcond=None)
     beta = float(coef[1])
@@ -115,9 +71,7 @@ def beta_and_pvalue(y: np.ndarray, x: np.ndarray) -> tuple[float, float]:
     return beta, pvalue
 
 
-# --------------------------------------------------------------------------
-# Milestones 4-5
-# --------------------------------------------------------------------------
+# signals + backtest
 
 def rolling_zscore(spread: pd.Series, window: int = ZSCORE_WINDOW) -> pd.Series:
     r = spread.rolling(window)
@@ -188,10 +142,6 @@ def run_pair(y: pd.Series, x: pd.Series, beta: float,
     }
     return result, z, pos, stats
 
-
-# --------------------------------------------------------------------------
-# Driver
-# --------------------------------------------------------------------------
 
 def main() -> None:
     RESULTS.mkdir(exist_ok=True)

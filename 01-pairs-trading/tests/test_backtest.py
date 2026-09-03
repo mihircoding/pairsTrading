@@ -35,11 +35,7 @@ class TestBacktest:
         return y, x, pos
 
     def test_positions_are_lagged(self):
-        """Day t's return must come from the position held at t-1.
-
-        pos goes to +1 on day 1, so the first day the strategy earns anything
-        is day 2. With zero costs, day 1's return must be exactly 0.
-        """
+        # pos goes long on day 1, so day 1 must still earn nothing
         y, x, pos = self.make_inputs()
         res = backtest_pair(y, x, beta=1.0, positions=pos, cost_bps=0.0)
         assert res["ret"].iloc[1] == pytest.approx(0.0)

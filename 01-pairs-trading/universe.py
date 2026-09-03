@@ -1,17 +1,7 @@
-"""S&P 100 universe with GICS sector tags.
+"""S&P 100 tickers with GICS sectors.
 
-Why sectors matter here: the 12-ticker run showed that ranking pairs by p-value
-picked a coincidence (CVX/WFC, an oil major against a bank) over the pair with a
-real economic story (MA/V, a payments duopoly). Tagging every ticker lets the
-scan split its results into same-sector and cross-sector pairs and ask whether
-the statistics behave differently when there is a reason for the relationship.
-
-SURVIVORSHIP BIAS, stated up front: this is the S&P 100 as it stands *today*.
-Membership is awarded for having already grown large, so backtesting it from
-2013 is a rigged sample -- we are asking how today's winners behaved on their
-way to winning. Companies that were in the index in 2013 and then collapsed or
-were acquired are simply absent. Nothing in this project can fix that; it needs
-a point-in-time constituent list (CRSP, Compustat). Know it and say it.
+Note: this is today's index, so the backtest is survivorship biased. Fixing it
+needs point-in-time constituents (CRSP/Compustat), which I don't have.
 """
 
 SP100: dict[str, str] = {
@@ -137,15 +127,8 @@ def sector(ticker: str) -> str:
     return SP100.get(ticker, "Unknown")
 
 
+# rough stand-in for "is there an economic reason these two move together"
 def same_sector(a: str, b: str) -> bool:
-    """True when both legs sit in the same GICS sector.
-
-    This is the crude proxy for 'is there an economic reason these two should
-    track each other'. Crude because same-sector is neither necessary nor
-    sufficient -- V and MA are both Financials and genuinely linked, while
-    JPM and BRK-B share a sector and do very different things. It is still the
-    single most useful filter available without hand-curating every pair.
-    """
     return sector(a) == sector(b) and sector(a) != "Unknown"
 
 

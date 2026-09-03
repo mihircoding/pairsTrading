@@ -15,7 +15,7 @@ class TestSpread:
 
 class TestRollingZscore:
     def test_no_lookahead(self, cointegrated_pair):
-        """The z-score at time t must not change if the future changes."""
+        # truncating the series must not change earlier z-scores
         y, x = cointegrated_pair
         spread = y - 2.5 * x
         z_full = rolling_zscore(spread, window=60)
@@ -29,7 +29,7 @@ class TestRollingZscore:
         assert not np.isnan(z.iloc[59])
 
     def test_standardization(self, rng):
-        """On stationary noise, the rolling z-score should be roughly N(0,1)."""
+        # on stationary noise the z-score should be roughly N(0,1)
         s = pd.Series(rng.normal(5.0, 2.0, 3000))
         z = rolling_zscore(s, window=100).dropna()
         assert abs(z.mean()) < 0.1
@@ -52,7 +52,7 @@ class TestPositions:
         assert pos.tolist() == [0, 1, 1, 0, 0]
 
     def test_hysteresis_no_reentry_between_thresholds(self):
-        """z between exit and entry when flat -> stay flat."""
+        # z between exit and entry while flat -> stay flat
         z = self.make_z([0.0, 1.5, 1.9, 1.0])
         pos = generate_positions(z, entry=2.0, exit=0.5)
         assert pos.tolist() == [0, 0, 0, 0]

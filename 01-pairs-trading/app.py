@@ -1,16 +1,4 @@
-"""Pairs Trading Lab — interactive explorer for the S&P 100 scan.
 
-    pip install -r requirements.txt
-    python scan.py        # once, builds results/ (~65s)
-    streamlit run app.py
-
-Deployment (free): push to GitHub, then on https://share.streamlit.io create an
-app pointing at 01-pairs-trading/app.py.
-
-This app deliberately leads with the negative result. A tool that only showed
-you the top of the leaderboard would teach you the opposite of what the data
-says.
-"""
 
 from __future__ import annotations
 
@@ -31,9 +19,7 @@ RESULTS = ROOT / "results"
 st.set_page_config(page_title="Pairs Trading Lab", page_icon=":chart:", layout="wide")
 
 
-# --------------------------------------------------------------------------
 # Data
-# --------------------------------------------------------------------------
 
 @st.cache_data
 def load():
@@ -69,9 +55,7 @@ overview, verdict, explorer, table = st.tabs(
 )
 
 
-# --------------------------------------------------------------------------
 # Overview
-# --------------------------------------------------------------------------
 
 with overview:
     c = st.columns(4)
@@ -121,9 +105,7 @@ p ≤ 0.05/{meta['n_tests']:,} = **{meta['bonferroni_threshold']:.2e}**.
     )
 
 
-# --------------------------------------------------------------------------
 # Did the screen work?
-# --------------------------------------------------------------------------
 
 with verdict:
     st.subheader("The honest answer: no")
@@ -216,9 +198,7 @@ of the relationships the screen found had stopped existing by the time you trade
     )
 
 
-# --------------------------------------------------------------------------
 # Pair explorer
-# --------------------------------------------------------------------------
 
 with explorer:
     st.subheader("Inspect any pair")
@@ -290,9 +270,7 @@ with explorer:
     )
 
 
-# --------------------------------------------------------------------------
 # All results
-# --------------------------------------------------------------------------
 
 with table:
     st.subheader("Every pair that passed the screen")
