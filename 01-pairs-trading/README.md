@@ -172,9 +172,11 @@ subtler cousin of lookahead bias.
 
 ## Stretch goals
 
-- Replace the fixed OLS hedge ratio with a **rolling** or **Kalman-filter** hedge ratio
-  (the `pykalman` route is a classic; implementing the filter yourself from the update
-  equations is better).
+- ~~Replace the fixed OLS hedge ratio with a **rolling** or **Kalman-filter** hedge
+  ratio~~ - done, `kalman_hedge_ratio()` in `src/pairs.ipynb`, implemented from the update
+  equations rather than `pykalman`. Applied to the one pair that survived Bonferroni
+  (ACN/LIN): flips its out-of-sample result from -6.1% (Sharpe -0.11, frozen beta) to
+  +3.8% (Sharpe 0.16, continuously updated beta) - see [RESULTS.md](RESULTS.md).
 - ~~Compute the spread's half-life of mean reversion~~ — done: `half_life()` in
   `src/pairs.ipynb`, fits an AR(1) to the spread the same way an OU process implies.
   Still open: actually use it to set the z-score window per pair instead of the fixed
