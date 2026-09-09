@@ -1,5 +1,7 @@
 # Pairs Trading
 
+**[Live site &rarr;](https://mihircoding.github.io/pairsTrading/)** — the full scan, every surviving pair, and a browser-side backtest you can re-run with your own parameters.
+
 A statistical arbitrage study on the S&P 100: screen every pair for cointegration on a
 formation window, then trade the survivors out of sample and see whether the screen actually
 predicted anything.
