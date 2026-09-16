@@ -93,9 +93,9 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 
 <header>
 <div class="wrap">
-  <div class="tagline">Negative result — reported in full</div>
+  <div class="tagline">Statistical arbitrage across 4,950 pairs</div>
   <h1>Pairs Trading Lab</h1>
-  <p class="lede">A cointegration screen run across every pair in the S&amp;P 100, then traded on data it was never selected on. <strong style="color:var(--ink)">930 of 4,950 pairs passed the statistical test. Out of sample they averaged a Sharpe ratio of &minus;0.009.</strong> This site documents why, and what the screen would need to be worth trusting.</p>
+  <p class="lede">A cointegration screen run across every pair in the S&amp;P 100, then traded on data it was never selected on. <strong style="color:var(--ink)">930 of 4,950 pairs passed the statistical test. Out of sample they averaged a Sharpe ratio of &minus;0.009.</strong></p>
   <div class="links">
     <a class="btn primary" href="#explorer">Explore the data</a>
     <a class="btn" href="https://github.com/mihircoding/pairsTrading/tree/main/01-pairs-trading">Source on GitHub</a>
@@ -108,7 +108,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 <div class="wrap">
   <div class="eyebrow">Method</div>
   <h2>How it was tested</h2>
-  <p class="lede">Pairs trading bets that two related securities which drift apart will converge. The hard part is not the trade — it is proving the relationship exists, and not fooling yourself while you look.</p>
+  <p class="lede">Pairs trading bets that two related securities which drift apart will converge. The hard part is establishing that the relationship is real and not an artifact of the sample.</p>
   <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
     <div class="card"><div class="k">Universe</div><div class="v" style="font-size:20px">S&amp;P 100</div><div class="s">100 tickers survived the history filter</div></div>
     <div class="card"><div class="k">Formation window</div><div class="v" style="font-size:20px">2013&ndash;2020</div><div class="s">pairs selected here only</div></div>
@@ -127,7 +127,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
       </ul>
     </div>
     <div>
-      <h3>The three honesty constraints</h3>
+      <h3>Controls</h3>
       <ul>
         <li><strong style="color:var(--ink)">No lookahead</strong> — the z-score uses a rolling window that ends at <span class="mono">t</span>, never the full-sample mean. Verified: truncating the series leaves earlier values bit-identical.</li>
         <li><strong style="color:var(--ink)">Positions lag by one bar</strong> — <span class="mono">positions.shift(1)</span>. You decide at today's close and earn tomorrow's return.</li>
@@ -185,7 +185,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 
   <div class="note blue">
     <p><strong>This contradicts what the small-scale version of this project suggested.</strong> On a 12-ticker universe the pair with a real economic story (Mastercard/Visa, a payments duopoly) beat the coincidence that topped the p-value ranking, and the tidy conclusion was "require an economic reason". At 100 tickers, same-sector pairs underperformed cross-sector ones.</p>
-    <p>Two caveats keep me from over-reading that reversal: only 119 same-sector pairs exist here, and GICS sector is a blunt instrument that files Berkshire Hathaway and Visa under the same heading. The defensible claim is that this particular filter does not rescue the strategy — not that economic reasoning is worthless.</p>
+    <p>Only 119 same-sector pairs exist here, and GICS sector is a blunt instrument that files Berkshire Hathaway and Visa under the same heading. So the reversal is weak evidence: this filter does not rescue the strategy, which is not the same as economic reasoning being worthless.</p>
   </div>
 </div>
 </section>
@@ -224,7 +224,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
     <div class="chart" style="height:200px"><canvas id="c-z"></canvas></div>
     <div class="chart" style="height:70px;margin-top:8px"><canvas id="c-pos"></canvas></div>
     <div class="chart" style="height:200px;margin-top:8px"><canvas id="c-eq"></canvas></div>
-    <p class="cap">&beta; is fixed at its formation-window value and never re-estimated on the trading window — re-fitting it here would leak the future into position sizes. Moving these sliders re-runs the backtest, which is itself the lesson: hunt long enough for parameters that flatter one pair and you are overfitting in real time.</p>
+    <p class="cap">&beta; is fixed at its formation-window value and never re-estimated on the trading window — re-fitting it here would leak the future into position sizes. Moving these sliders re-runs the backtest: hunt long enough for parameters that flatter one pair and you are overfitting in real time.</p>
   </div>
 </div>
 </section>
@@ -267,11 +267,11 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 
 <section>
 <div class="wrap">
-  <div class="eyebrow">Caveats</div>
-  <h2>What would have to change to trust this</h2>
+  <div class="eyebrow">Limitations</div>
+  <h2>Biases and modelling choices</h2>
   <div class="grid2">
     <div>
-      <h3>Known biases still present</h3>
+      <h3>Known biases</h3>
       <ul>
         <li><strong style="color:var(--ink)">Survivorship</strong> — this is the S&amp;P 100 as it stands today. Membership is awarded for having already grown large, so testing from 2013 asks how today's winners behaved on the way to winning. Firms that collapsed or were acquired are absent. Fixing it needs a point-in-time constituent list (CRSP, Compustat).</li>
         <li><strong style="color:var(--ink)">Parameter selection</strong> — the 60-day window and 2.0/0.5 thresholds were chosen by convention, not fitted, but they were chosen by someone who knows how this period played out.</li>
@@ -279,22 +279,14 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
       </ul>
     </div>
     <div>
-      <h3>Modelling choices worth defending</h3>
+      <h3>Modelling choices</h3>
       <ul>
         <li><strong style="color:var(--ink)">Equal dollar legs, not beta-weighted</strong> — &beta; defines the spread the signal is built on, but weighting positions by it needs daily rebalancing whose weights drift and whose trades cost money.</li>
         <li><strong style="color:var(--ink)">ADF is too permissive here</strong> — because &beta; is estimated, the residual is already optimised to look stationary. <span class="mono">statsmodels.coint()</span> uses stricter Engle-Granger critical values and consistently returns larger p-values.</li>
-        <li><strong style="color:var(--ink)">Lag search capped at 12</strong> — uncapped, AIC considers ~23 lags for this sample. Capping cut cost per test from 45ms to 11ms with near-identical answers. A speed/rigour trade, documented rather than hidden.</li>
+        <li><strong style="color:var(--ink)">Lag search capped at 12</strong> — uncapped, AIC considers ~23 lags for this sample. Capping cut cost per test from 45ms to 11ms with near-identical answers.</li>
       </ul>
     </div>
   </div>
-  <h3 style="margin-top:22px">Next steps that would actually help</h3>
-  <ul>
-    <li>Point-in-time universe to kill survivorship bias — the single largest unfixed problem.</li>
-    <li>Benjamini-Hochberg false-discovery control instead of Bonferroni, which is brutal at 4,950 tests.</li>
-    <li>Half-life of mean reversion (an Ornstein-Uhlenbeck fit) to set the z-score window from the data rather than by convention.</li>
-    <li>Walk-forward re-estimation of &beta; each quarter instead of freezing a 2020 value for five years.</li>
-    <li>Kalman-filter hedge ratio, so &beta; adapts as the relationship drifts.</li>
-  </ul>
 </div>
 </section>
 
