@@ -182,8 +182,12 @@ subtler cousin of lookahead bias.
   Still open: actually use it to set the z-score window per pair instead of the fixed
   60-bar default — right now it's a diagnostic, not a parameter.
 - Walk-forward analysis: re-estimate the hedge ratio and thresholds each quarter.
-- Portfolio of pairs: trade the top 5 pairs simultaneously and look at how the combined
-  Sharpe compares to the individual ones.
+- ~~Portfolio of pairs: trade the top pairs simultaneously and look at how the combined
+  Sharpe compares to the individual ones~~ - done, `portfolio.py`. All 930 survivors as one
+  equal-weight book: -2.14%, Sharpe -0.19, 48.8% of pairs profitable, average pairwise
+  correlation 0.033. It also answers the question the scan exists to ask - the rank
+  correlation between formation p-value and out-of-sample Sharpe is -0.05 across 930 pairs,
+  so the screen does not rank. See [RESULTS.md](RESULTS.md).
 
 ## Resources
 

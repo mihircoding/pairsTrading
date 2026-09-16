@@ -190,6 +190,43 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 </div>
 </section>
 
+<section>
+<div class="wrap">
+  <div class="eyebrow">Portfolio</div>
+  <h2>What if you traded all 930 instead of picking one?</h2>
+  <p class="lede">Everything above is one pair at a time, and the headline rests on ACN/LIN — a single draw, and a single draw can say anything. So trade every survivor at once, equal weight, same rule and same costs, and look at the book.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Book of all 930</div><div class="v red" id="p-ret">&mdash;</div><div class="s" id="p-sh">&mdash;</div></div>
+    <div class="card"><div class="k">Pairs with positive Sharpe</div><div class="v" id="p-pos">&mdash;</div><div class="s" id="p-prof">&mdash;</div></div>
+    <div class="card"><div class="k">Average pair correlation</div><div class="v" id="p-rho">&mdash;</div><div class="s">they share legs, so not zero</div></div>
+    <div class="card"><div class="k">p-value vs OOS Sharpe</div><div class="v" id="p-rank">&mdash;</div><div class="s" id="p-rank-s">&mdash;</div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:26px">
+    <div class="panel">
+      <h3>The book, 2021&ndash;2025</h3>
+      <div class="chart"><canvas id="c-book"></canvas></div>
+      <p class="cap">Equal-weight equity curve of every pair that passed the screen. Low volatility, because 930 roughly-uncorrelated spreads average out &mdash; and a slow drift down, because what they average out to is slightly below zero after costs.</p>
+    </div>
+    <div class="panel">
+      <h3>Taking the best N by p-value</h3>
+      <div class="scroll"><table id="t-sweep"><thead><tr><th class="n">N pairs</th><th class="n">Return</th><th class="n">Sharpe</th><th class="n">Max DD</th><th class="n">Ann vol</th></tr></thead><tbody></tbody></table></div>
+      <p class="cap">Sharpe peaks in the middle of the sweep and decays either side. That is what a peak looks like when you sweep a parameter over noise &mdash; the best row here was chosen after seeing the column, which is exactly the mistake the rest of this page is about.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><strong>Diversification worked perfectly, which is the problem.</strong> Averaging N equally-risked series with mean pairwise correlation &rho; multiplies Sharpe by <span class="mono">&radic;N / &radic;(1 + (N&minus;1)&rho;)</span>. At <span id="p-rho2">&mdash;</span> and N = 930 that factor is about 5.4 &mdash; and it gets applied to a mean pair Sharpe of <span id="p-mean">&mdash;</span>. The arithmetic faithfully magnifies a number that is zero.</p>
+    <p>The book realizes <span id="p-real">&mdash;</span> rather than the predicted <span id="p-pred">&mdash;</span>, and the gap is a sizing artifact worth naming: these pairs' volatilities span <span id="p-volspan">&mdash;</span>, and the correlation between a pair's volatility and its out-of-sample Sharpe is <span id="p-volcorr">&mdash;</span>. Equal <em>dollar</em> weighting therefore hands the most risk to the pairs that earned the least. Weighting them to equal risk instead recovers the predicted number exactly.</p>
+  </div>
+
+  <div class="note blue">
+    <p><strong>And it isn't 930 independent bets.</strong> 930 pairs drawn from 100 tickers is 1,860 legs over 100 names. The most-used leg is <span id="p-topleg">&mdash;</span>. A book like this is a handful of concentrated single-name positions wearing 930 labels &mdash; the small &rho; above is small mostly because the legs point in different directions, not because the bets are unrelated.</p>
+  </div>
+</div>
+</section>
+
 <section id="explorer">
 <div class="wrap">
   <div class="eyebrow">Interactive</div>
@@ -298,6 +335,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 </footer>
 
 <script src="data.js"></script>
+<script src="portfolio.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 const D = window.DATA, S = D.summary, M = D.meta;
@@ -520,6 +558,51 @@ $('prev').addEventListener('click',()=>{page--;renderTable();});
 $('next').addEventListener('click',()=>{page++;renderTable();});
 
 draw(); renderTable();
+
+/* ---------- portfolio of all survivors (portfolio.py) ---------- */
+(function(){
+  const P = window.PORTFOLIO;
+  if (!P) return;
+  const d = P.diversification, f = P.full_book, rc = P.rank_correlation;
+  const pc = v => (v*100).toFixed(1) + '%';
+
+  $('p-ret').textContent = fmtPct(f.total_return);
+  $('p-sh').textContent = 'Sharpe ' + f.sharpe.toFixed(2) + ', ' + pc(f.ann_vol) + ' vol';
+  $('p-pos').textContent = pc(d.share_positive_sharpe);
+  $('p-prof').textContent = pc(d.share_profitable) + ' actually made money';
+  $('p-rho').textContent = d.avg_correlation.toFixed(3);
+  $('p-rank').textContent = (rc.spearman >= 0 ? '+' : '') + rc.spearman.toFixed(3);
+  $('p-rank-s').textContent = 'z = ' + rc.z.toFixed(1) + ' over ' + rc.n + ' pairs';
+
+  $('p-rho2').textContent = 'ρ = ' + d.avg_correlation.toFixed(3);
+  $('p-mean').textContent = d.mean_pair_sharpe.toFixed(3);
+  $('p-real').textContent = d.realized_book_sharpe.toFixed(2);
+  $('p-pred').textContent = d.predicted_book_sharpe.toFixed(2);
+  $('p-volspan').textContent = d.vol_ratio_max_to_min.toFixed(1) + '×';
+  $('p-volcorr').textContent = d.corr_pair_vol_vs_sharpe.toFixed(2);
+  const top = P.concentration[0];
+  $('p-topleg').textContent = `${top.ticker}, in ${top.n_legs} pairs — ${pc(top.share_of_legs)} of the book's gross exposure in one stock`;
+
+  new Chart($('c-book'), {type:'line', data:{
+    labels: P.equity.map(p => p[0]),
+    datasets: [{label:'Equal-weight book', data: P.equity.map(p => p[1]),
+                borderColor:'#2563eb', borderWidth:1.6, pointRadius:0, tension:0}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+               tooltip:{callbacks:{label:c => 'equity ' + c.parsed.y.toFixed(3)}}},
+      scales:{x:{grid:{display:false}, ticks:{maxTicksLimit:7, autoSkip:true}},
+              y:{ticks:{callback:v => v.toFixed(2)}}}}});
+
+  document.querySelector('#t-sweep tbody').innerHTML = P.sweep.map(r => {
+    const best = r.sharpe === Math.max(...P.sweep.map(x => x.sharpe));
+    return `<tr><td class="n">${best ? '<strong>' + r.n_pairs + '</strong>' : r.n_pairs}</td>
+      <td class="n">${fmtPct(r.total_return)}</td>
+      <td class="n">${best ? '<strong>' + r.sharpe.toFixed(2) + '</strong>' : r.sharpe.toFixed(2)}</td>
+      <td class="n">${fmtPct(r.max_drawdown)}</td>
+      <td class="n">${(r.ann_vol*100).toFixed(2)}%</td></tr>`;
+  }).join('');
+})();
+
 </script>
 </body>
 </html>

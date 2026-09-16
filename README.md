@@ -10,12 +10,17 @@ Short version — it didn't. 4,950 pairs tested, 930 passed at 5%, one survived 
 and the mean out-of-sample Sharpe across the survivors was indistinguishable from zero.
 The write-up leads with that rather than the top of the leaderboard.
 
+Trading all 930 survivors as one equal-weight book returns −2.14% at a Sharpe of −0.19, and
+the formation p-value's rank correlation with out-of-sample Sharpe is −0.05 over those 930
+pairs. The screen doesn't rank — which is a stronger statement than any single pair can make.
+
 ## Layout
 
 | Path | What it is |
 |---|---|
 | [`01-pairs-trading/src/pairs.ipynb`](01-pairs-trading/src/pairs.ipynb) | The pipeline, built up step by step on a 12-ticker universe |
 | [`01-pairs-trading/scan.py`](01-pairs-trading/scan.py) | The full S&P 100 scan — writes everything to `results/` |
+| [`01-pairs-trading/portfolio.py`](01-pairs-trading/portfolio.py) | Trades all 930 survivors as a book, and asks whether the p-value ranks |
 | [`01-pairs-trading/app.py`](01-pairs-trading/app.py) | Streamlit explorer over those results |
 | [`01-pairs-trading/README.md`](01-pairs-trading/README.md) | The theory: cointegration vs correlation, Engle-Granger, the pitfalls |
 | [`docs/`](docs/) | Static version of the explorer for GitHub Pages |
@@ -29,6 +34,7 @@ python -m venv .venv
 pip install -r requirements.txt
 pytest
 python scan.py          # ~65s, builds results/
+python portfolio.py     # the book of all 930 survivors, needs results/
 streamlit run app.py
 ```
 
