@@ -1,0 +1,75 @@
+{
+  "frozen selection, frozen beta": {
+    "label": "frozen selection, frozen beta",
+    "total_return": -0.012705469253354251,
+    "sharpe": -0.12008389398583377,
+    "vol": 0.019772380423900615,
+    "max_drawdown": -0.04157871859337414,
+    "mean_pairs": 930.0,
+    "min_pairs": 930,
+    "max_pairs": 930,
+    "roster_churn": 0.0,
+    "quarters": 20
+  },
+  "frozen selection, quarterly beta": {
+    "label": "frozen selection, quarterly beta",
+    "total_return": 0.0007848545472008972,
+    "sharpe": 0.018003343146512377,
+    "vol": 0.02106579800225474,
+    "max_drawdown": -0.031160278088935844,
+    "mean_pairs": 930.0,
+    "min_pairs": 930,
+    "max_pairs": 930,
+    "roster_churn": 0.0,
+    "quarters": 20
+  },
+  "quarterly selection and beta": {
+    "label": "quarterly selection and beta",
+    "total_return": -0.005654648582319455,
+    "sharpe": -0.03906792941377677,
+    "vol": 0.02262552428062368,
+    "max_drawdown": -0.029864120958108198,
+    "mean_pairs": 876.45,
+    "min_pairs": 651,
+    "max_pairs": 1555,
+    "roster_churn": 0.5499304933409048,
+    "quarters": 20
+  },
+  "quarterly, p <= 0.01": {
+    "label": "quarterly, p <= 0.01",
+    "total_return": 0.0006158205297999153,
+    "sharpe": 0.017524218060800796,
+    "vol": 0.025286820079197716,
+    "max_drawdown": -0.03916079853420351,
+    "mean_pairs": 278.2,
+    "min_pairs": 156,
+    "max_pairs": 684,
+    "roster_churn": 0.6591228586749406,
+    "quarters": 20
+  },
+  "quarterly, z-window from half-life": {
+    "label": "quarterly, z-window from half-life",
+    "total_return": -0.00023951325815996238,
+    "sharpe": 0.009095752803728489,
+    "vol": 0.022501790877080936,
+    "max_drawdown": -0.036893270279669266,
+    "mean_pairs": 876.45,
+    "min_pairs": 651,
+    "max_pairs": 1555,
+    "roster_churn": 0.5499304933409048,
+    "quarters": 20
+  },
+  "meta": {
+    "first_quarter": "2021-01-04",
+    "last_quarter": "2025-10-01",
+    "quarters": 20,
+    "trail_days": 756,
+    "pairs_per_quarter": {
+      "min": 651,
+      "median": 799,
+      "max": 1555
+    },
+    "never_pass": 856,
+    "always_pass": 0
+  }
+}

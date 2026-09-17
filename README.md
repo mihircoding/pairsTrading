@@ -14,6 +14,15 @@ Trading all 930 survivors as one equal-weight book returns −2.14% at a Sharpe 
 the formation p-value's rank correlation with out-of-sample Sharpe is −0.05 over those 930
 pairs. The screen doesn't rank — which is a stronger statement than any single pair can make.
 
+The obvious objection is that everything is estimated once and frozen for five years, which is
+not how a pairs book is run. So `walkforward.py` re-scans all 4,950 pairs every quarter on
+trailing data, re-estimates each hedge ratio, and trades whatever currently passes — 99,000
+cointegration tests. Refitting the beta, re-running the screen, tightening it to 1%, and sizing
+the z-score window by each pair's own half-life all land between −1.27% and +0.08% over five
+years. And the reason is in the scan itself: **0 of 4,950 pairs pass the cointegration test in
+all 20 quarters**, and the median pair that ever passes, passes in 4 of 20. The screen doesn't
+rank and it doesn't repeat.
+
 ## Layout
 
 | Path | What it is |
@@ -21,6 +30,7 @@ pairs. The screen doesn't rank — which is a stronger statement than any single
 | [`01-pairs-trading/src/pairs.ipynb`](01-pairs-trading/src/pairs.ipynb) | The pipeline, built up step by step on a 12-ticker universe |
 | [`01-pairs-trading/scan.py`](01-pairs-trading/scan.py) | The full S&P 100 scan — writes everything to `results/` |
 | [`01-pairs-trading/portfolio.py`](01-pairs-trading/portfolio.py) | Trades all 930 survivors as a book, and asks whether the p-value ranks |
+| [`01-pairs-trading/walkforward.py`](01-pairs-trading/walkforward.py) | Re-scans and re-estimates every quarter, and asks whether the screen repeats |
 | [`01-pairs-trading/app.py`](01-pairs-trading/app.py) | Streamlit explorer over those results |
 | [`01-pairs-trading/README.md`](01-pairs-trading/README.md) | The theory: cointegration vs correlation, Engle-Granger, the pitfalls |
 | [`docs/`](docs/) | Static version of the explorer for GitHub Pages |

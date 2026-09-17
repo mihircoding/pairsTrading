@@ -190,6 +190,94 @@ like this is a handful of concentrated single-name positions wearing 930
 labels, and the ρ = 0.033 above is small largely because the legs point in
 different directions, not because the bets are unrelated.
 
+## Re-estimating every quarter
+
+Every result above this line estimates once. One formation window picks the
+pairs, fixes each hedge ratio, and then five years are traded without ever
+looking again. That is the single most obvious objection to the whole study,
+because it is not how anyone runs a pairs book: a relationship that was
+cointegrated over 2015-2020 has no obligation to stay that way, and a hedge
+ratio estimated in 2020 is a statement about 2020.
+
+`walkforward.py` settles it. Every quarter, re-scan all 4,950 pairs on the
+trailing three years, keep whatever passes, re-estimate its hedge ratio on the
+same window, and trade that book for one quarter. Nothing ever sees data from
+its own quarter. 20 quarterly re-estimates, 99,000 cointegration tests, on the
+identical 2021-2025 window as everything above.
+
+| Variant | Return | Sharpe | Vol | Max DD | Pairs held | Roster churn |
+|---|---|---|---|---|---|---|
+| frozen selection, frozen beta | −1.27% | −0.12 | 1.98% | −4.16% | 930 | 0% |
+| frozen selection, quarterly beta | +0.08% | 0.02 | 2.11% | −3.12% | 930 | 0% |
+| quarterly selection and beta | −0.57% | −0.04 | 2.26% | −2.99% | 876 | 55% |
+| quarterly, p ≤ 0.01 | +0.06% | 0.02 | 2.53% | −3.92% | 278 | 66% |
+| quarterly, z-window from half-life | −0.02% | 0.01 | 2.25% | −3.69% | 876 | 55% |
+
+The first row reproduces the frozen book from the section above. It reads
+−1.27% here against −2.14% there because this driver restarts each pair's
+z-score at every quarter boundary with a trailing warmup, which is a slightly
+different rule, not a different result — both are zero.
+
+**Refitting does not rescue it, and the interesting part is how completely it
+fails to matter.** Five different answers to "what should we re-estimate, and
+how often" produce five numbers between −1.27% and +0.08% over five years.
+Nothing helps. Nothing hurts. Tightening the screen from 5% to 1% cuts the book
+from 876 pairs to 278 and moves the return by six basis points. Replacing the
+fixed 60-bar z-score window with each pair's own measured half-life — the last
+open stretch goal in this file — moves it by five.
+
+That is what it looks like when a signal is zero rather than mis-implemented.
+A parameter genuinely on the wrong setting shows up as a result that changes
+when you change it.
+
+### The number that explains the whole project
+
+```
+Pairs passing at 5% per quarter:  min 651, median 799, max 1555  (out of 4,950)
+
+Of 4,950 pairs:      856  never pass in any of the 20 quarters
+                       0  pass in all 20
+                   4,094  pass in some quarters and not others
+
+Median quarters passed, among pairs that ever pass:  4 of 20
+```
+
+**Not one pair out of 4,950 is cointegrated in all twenty quarters.** The
+typical pair that passes at all passes in four quarters out of twenty and fails
+in the other sixteen. The roster turns over 55% every three months.
+
+Cointegration is supposed to be a property of a relationship, not of a window.
+Two stocks that are genuinely tied together — same business, same inputs, same
+customers — do not become untied for nine months and then tied again. A screen
+whose verdict survives one quarter in five is not measuring a property of the
+pair; it is measuring which noise happened to look like reversion in the last
+three years of data, and re-running it quarterly just draws a fresh sample of
+noise.
+
+This is the same conclusion the p-value quintile test reached from the other
+direction. That one showed the screen cannot *rank* pairs: the strongest fifth
+did worse out of sample than the second, and the rank correlation between
+formation p-value and out-of-sample Sharpe was −0.05. This one shows it cannot
+*repeat*. Between them there is not much left of the screen, and the honest
+summary is that 930 pairs "passing at 5%" was always a statement about testing
+4,950 hypotheses rather than about 930 relationships.
+
+Worth being precise about what is and is not being claimed: 651 to 1,555 pairs
+pass per quarter against the ~248 that pure chance predicts, so there is
+genuine common structure in the universe — 100 large-cap US stocks share
+sectors, factors and a market. The claim is narrower. That structure is not
+stable at the pair level, on this horizon, at a strength this screen can find,
+and none of the standard fixes change that.
+
+### What would be next, and why it isn't more refitting
+
+Having ruled out the estimation schedule, the remaining candidates are the
+data and the universe rather than the method: point-in-time index membership
+(the survivorship caveat below is real and unaddressed), intraday rather than
+daily bars, and a universe chosen by economic relationship rather than by
+running every pair through a test. All three are ways of making the *screen*
+unnecessary. That is probably the actual lesson of this project.
+
 ## Stretch goals
 
 - **Kalman-filter hedge ratio** - done, see above and
@@ -199,10 +287,16 @@ different directions, not because the bets are unrelated.
   x` convention (no separately-floating intercept - see the function's
   docstring for why that would actually be a worse model here, not just a
   simpler one). 6 new tests in `tests/test_kalman.py`.
-- **Use `half_life()` to set the z-score window per pair** instead of the
-  fixed 60-bar default used everywhere above - still open.
-- **Walk-forward analysis**: re-estimate hedge ratios and thresholds each
-  quarter rather than once per multi-year window.
+- ~~**Use `half_life()` to set the z-score window per pair**~~ - done, see
+  the walk-forward section above. It moves the five-year return by five basis
+  points, which is the answer but not the interesting part: the interesting
+  part is that nothing else moved it either.
+- ~~**Walk-forward analysis**~~ - done, `walkforward.py`, 20 quarterly
+  re-estimates over 99,000 cointegration tests. Refitting the hedge ratio,
+  re-running the screen, tightening the screen and resizing the z-score
+  window all land between -1.27% and +0.08% over five years. The finding that
+  came out of it: **0 of 4,950 pairs pass the cointegration test in all 20
+  quarters**, and the median pair that ever passes, passes in 4 of 20.
 - ~~**Portfolio of pairs**~~ - done, see "Trading all of them at once"
   above and `portfolio.py`. The equal-weight book of all 930 returns
   -2.14% at a Sharpe of -0.19, 48.8% of pairs make money, and the

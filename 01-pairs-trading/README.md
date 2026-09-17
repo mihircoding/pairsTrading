@@ -72,6 +72,9 @@ paper.
 01-pairs-trading/
 ├── README.md
 ├── RESULTS.md             # write-up: results, pitfalls checklist, next steps
+├── scan.py                # the full S&P 100 scan
+├── portfolio.py           # all 930 survivors as one book
+├── walkforward.py         # quarterly re-scan and re-estimate, 99k coint tests
 ├── requirements.txt
 ├── backtest.png           # z-score and equity curve from the milestone 6 run
 ├── src/
