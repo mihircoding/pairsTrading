@@ -1,30 +1,4 @@
-"""Trade all the survivors at once, instead of picking one to look at.
 
-RESULTS.md's headline comes from one pair: ACN/LIN, the only one of 4,950
-that clears Bonferroni, loses money out of sample. That is a fair headline
-and a fragile one - it is a single draw, and a single draw can say anything.
-The README has listed the fix as a stretch goal since the beginning: trade
-the survivors as a portfolio and ask whether *any* aggregate edge is there
-once you stop cherry-picking.
-
-This answers that, and three questions that come with it.
-
-  1. What does an equal-weight book of all 930 survivors actually return?
-  2. Does the formation p-value - the thing the whole scan is built on -
-     predict out-of-sample Sharpe at all? If a portfolio of the best 25 by
-     p-value beats a portfolio of the worst 25, the screen has information
-     in it even if no single pair is tradeable. If it doesn't, the screen
-     is ranking noise.
-  3. Where does the portfolio's Sharpe come from arithmetically? Averaging
-     N pairs multiplies Sharpe by sqrt(N) only if the pairs are
-     uncorrelated. These share legs - 930 pairs over 100 tickers - so they
-     cannot be, and the average pairwise correlation says how much of the
-     diversification is real.
-
-Run it after scan.py has written results/:
-
-    python portfolio.py
-"""
 
 from __future__ import annotations
 
@@ -48,13 +22,7 @@ SIZES = (1, 5, 10, 25, 50, 100, 250, 500, 930)
 
 
 def pair_returns(results: pd.DataFrame, trading: pd.DataFrame) -> pd.DataFrame:
-    """Daily net return of every surviving pair, one column per pair.
-
-    Re-runs each pair through the same backtest the scan used rather than
-    reading the summary stats, because a portfolio needs the return series
-    and not the Sharpe. Same beta, same z-score rule, same costs - nothing
-    here is a second strategy.
-    """
+    
     series = {}
     for row in results.itertuples():
         result, _, _, _ = run_pair(trading[row.a], trading[row.b], row.beta)
@@ -63,20 +31,7 @@ def pair_returns(results: pd.DataFrame, trading: pd.DataFrame) -> pd.DataFrame:
 
 
 def book(returns: pd.DataFrame, equal_risk: bool = False) -> dict:
-    """Weight the columns and report the book's statistics.
-
-    Equal weight by default, rather than anything cleverer, on purpose:
-    sizing by formation-window Sharpe would be fitting weights on the same
-    data the pairs were selected on, which is the mistake this whole project
-    is about.
-
-    equal_risk divides each pair by its own trading-window volatility before
-    averaging, so every pair contributes the same risk rather than the same
-    dollar. That does use trading-window information and is NOT a strategy
-    anyone could have run - it is here as a diagnostic, because the gap
-    between the two weightings is exactly the contribution of the pairs that
-    happened to be volatile.
-    """
+    
     if equal_risk:
         vol = returns.std(ddof=1).replace(0.0, np.nan)
         daily = (returns / vol).mean(axis=1)
@@ -201,14 +156,7 @@ def rank_correlation(results: pd.DataFrame) -> dict:
 
 
 def leg_concentration(results: pd.DataFrame) -> pd.DataFrame:
-    """How much of the book is really one stock.
-
-    930 pairs drawn from 100 tickers cannot be 930 independent bets. Every
-    appearance of a ticker is a leg, and a name that shows up in 200 pairs
-    carries far more of the book's risk than equal weighting suggests it
-    does. This is the honest counterweight to the diversification arithmetic
-    above.
-    """
+    
     legs = pd.concat([results["a"], results["b"]]).value_counts()
     total = int(legs.sum())
     return pd.DataFrame({

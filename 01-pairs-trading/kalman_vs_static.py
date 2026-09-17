@@ -1,26 +1,4 @@
-"""Does a Kalman-filter hedge ratio rescue the one pair this project's scan
-actually found?
 
-scan.py tested 4,950 pairs on the S&P 100, formation window 2013-2020: 930
-passed at 5%, exactly 1 survived a Bonferroni correction (ACN/LIN, beta
-0.9317 from the formation-window OLS fit). results/results.parquet already
-says what happened when that single "statistically real" pair was traded
-out of sample on a FIXED formation beta: Sharpe -0.11, total return -6.1%,
-and an out-of-sample ADF p-value of 0.18 - the relationship that looked
-real in formation didn't even test as cointegrated anymore in trading.
-
-This script asks a narrower, honest question: is any of that the fixed
-beta's fault? It reruns the identical z-score strategy on the identical
-trading-window prices, with the only change being a Kalman filter (see
-src/pairs.ipynb :: kalman_hedge_ratio) tracking beta continuously through
-both windows instead of freezing it at the end of formation. If a moving
-beta doesn't help here, that's useful to know too - it would mean the
-pair's problem wasn't a stale hedge ratio, it was that the relationship
-itself didn't hold up.
-
-Needs no network: results/formation.parquet and results/trading.parquet
-are the exact price data scan.py already downloaded and cached.
-"""
 
 from __future__ import annotations
 
@@ -42,11 +20,7 @@ STATIC_BETA = 0.931742  # from results.parquet - the formation-window OLS fit
 
 def kalman_hedge_ratio(y: pd.Series, x: pd.Series, delta: float = 1e-4,
                        r_var: float | None = None) -> pd.Series:
-    """Same filter as src/pairs.ipynb's kalman_hedge_ratio - duplicated here
-    rather than imported because this script, like scan.py itself, runs
-    standalone against real cached data and isn't part of the notebook's
-    test-imported surface. See the notebook cell for the full derivation
-    and why it's through-origin (no separate intercept state)."""
+   
     df = pd.concat([y, x], axis=1).dropna()
     y_vals = df.iloc[:, 0].to_numpy(dtype=float)
     x_vals = df.iloc[:, 1].to_numpy(dtype=float)
@@ -88,10 +62,7 @@ def run_static(y: pd.Series, x: pd.Series, beta: float) -> dict:
 
 
 def run_kalman(y_full: pd.Series, x_full: pd.Series, trading_index: pd.Index) -> dict:
-    """Filter over formation+trading together (so beta has already settled
-    by the first trading day) but only ever trade the trading-window dates -
-    exactly mirroring how the static approach fits on formation and trades
-    on trading, except the fit keeps updating instead of freezing."""
+    
     beta_t = kalman_hedge_ratio(y_full, x_full)
     beta_trading = beta_t.reindex(trading_index)
 

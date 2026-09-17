@@ -1,7 +1,6 @@
 """S&P 100 tickers with GICS sectors.
 
-Note: this is today's index, so the backtest is survivorship biased. Fixing it
-needs point-in-time constituents (CRSP/Compustat), which I don't have.
+
 """
 
 SP100: dict[str, str] = {
