@@ -72,18 +72,25 @@ paper.
 01-pairs-trading/
 ├── README.md
 ├── RESULTS.md             # write-up: results, pitfalls checklist, next steps
+├── universe.py            # S&P 100 tickers and GICS sectors
 ├── scan.py                # the full S&P 100 scan
 ├── portfolio.py           # all 930 survivors as one book
 ├── walkforward.py         # quarterly re-scan and re-estimate, 99k coint tests
+├── kalman_vs_static.py    # ACN/LIN with a frozen beta vs a Kalman-filtered one
+├── app.py                 # Streamlit explorer over results/
 ├── requirements.txt
 ├── backtest.png           # z-score and equity curve from the milestone 6 run
+├── results/               # scan, portfolio and walk-forward output
 ├── src/
 │   └── pairs.ipynb        # everything: milestones 1-6, with explanations inline
 └── tests/
     ├── conftest.py        # fixtures + the loader that imports from the notebook
     ├── test_pairs.py
     ├── test_signals.py
-    └── test_backtest.py
+    ├── test_backtest.py
+    ├── test_kalman.py
+    ├── test_portfolio.py
+    └── test_walkforward.py
 ```
 
 All the code lives in one notebook. `tests/conftest.py` reads the notebook, executes
@@ -182,9 +189,13 @@ subtler cousin of lookahead bias.
   +3.8% (Sharpe 0.16, continuously updated beta) - see [RESULTS.md](RESULTS.md).
 - ~~Compute the spread's half-life of mean reversion~~ — done: `half_life()` in
   `src/pairs.ipynb`, fits an AR(1) to the spread the same way an OU process implies.
-  Still open: actually use it to set the z-score window per pair instead of the fixed
-  60-bar default — right now it's a diagnostic, not a parameter.
-- Walk-forward analysis: re-estimate the hedge ratio and thresholds each quarter.
+  `walkforward.py` then uses it to set each pair's z-score window (four half-lives,
+  clipped to 20-252 bars) instead of the fixed 60: -0.02% over five years.
+- ~~Walk-forward analysis: re-estimate the hedge ratio each quarter~~ - done,
+  `walkforward.py`. Every quarter it re-scans all 4,950 pairs on the trailing three
+  years, re-estimates beta, and trades what passes. Five variants land between -1.27%
+  and +0.08% over five years, and 0 of 4,950 pairs pass in all 20 quarters. Entry and
+  exit thresholds stay at 2.0 / 0.5 throughout. See [RESULTS.md](RESULTS.md).
 - ~~Portfolio of pairs: trade the top pairs simultaneously and look at how the combined
   Sharpe compares to the individual ones~~ - done, `portfolio.py`. All 930 survivors as one
   equal-weight book: -2.14%, Sharpe -0.19, 48.8% of pairs profitable, average pairwise

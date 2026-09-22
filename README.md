@@ -33,7 +33,7 @@ rank and it doesn't repeat.
 | [`01-pairs-trading/walkforward.py`](01-pairs-trading/walkforward.py) | Re-scans and re-estimates every quarter, and asks whether the screen repeats |
 | [`01-pairs-trading/app.py`](01-pairs-trading/app.py) | Streamlit explorer over those results |
 | [`01-pairs-trading/README.md`](01-pairs-trading/README.md) | The theory: cointegration vs correlation, Engle-Granger, the pitfalls |
-| [`docs/`](docs/) | Static version of the explorer for GitHub Pages |
+| [`docs/`](docs/) | Static version of the explorer for GitHub Pages; `portfolio.py` and `walkforward.py` write its data files |
 
 ## Running it
 
@@ -45,6 +45,7 @@ pip install -r requirements.txt
 pytest
 python scan.py          # ~65s, builds results/
 python portfolio.py     # the book of all 930 survivors, needs results/
+python walkforward.py   # quarterly re-scan, 99,000 tests, slow; --cached reuses the scan
 streamlit run app.py
 ```
 

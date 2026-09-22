@@ -43,6 +43,9 @@ ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 SCAN_CACHE = RESULTS / "walkforward_scan.parquet"
 OUT = RESULTS / "walkforward.json"
+# Same arrangement as portfolio.py: the project site reads its numbers from a
+# file this script writes, rather than having them typed into the HTML.
+SITE_OUT = ROOT.parent / "docs" / "walkforward.js"
 
 TRAIL_DAYS = 756          # three years of trailing data per re-estimate
 PVALUE = 0.05
@@ -290,6 +293,19 @@ def main() -> None:
           f"{int(counts.median())} of {len(starts)}")
 
     payload = {v["label"]: {k: v[k] for k in v if k != "equity"} for v in variants}
+    payload["per_quarter"] = [
+        {"date": str(d.date()), "passed": int(per_quarter.get(d, 0))}
+        for d in starts]
+    # How many of the 20 quarters each pair passed in. Index 0 is the pairs
+    # that never pass; the last index is the pairs that pass every time.
+    payload["quarters_passed"] = [
+        never if k == 0 else int((counts == k).sum())
+        for k in range(len(starts) + 1)]
+    frame = pd.DataFrame({v["label"]: v["equity"] for v in variants})
+    payload["equity"] = {
+        "dates": [d.strftime("%Y-%m-%d") for d in frame.index],
+        "series": {c: [round(float(x), 5) for x in frame[c]] for c in frame},
+    }
     payload["meta"] = {
         "first_quarter": str(starts[0].date()),
         "last_quarter": str(starts[-1].date()),
@@ -302,6 +318,12 @@ def main() -> None:
     }
     OUT.write_text(json.dumps(payload, indent=2))
     print(f"\nWrote {OUT}")
+
+    if SITE_OUT.parent.exists():
+        SITE_OUT.write_text(
+            "window.WALKFORWARD = " + json.dumps(payload, separators=(",", ":")) + ";\n",
+            encoding="utf-8")
+        print(f"Wrote {SITE_OUT} ({SITE_OUT.stat().st_size / 1024:.0f} KB)")
 
 
 if __name__ == "__main__":

@@ -222,9 +222,10 @@ different rule, not a different result — both are zero.
 fails to matter.** Five different answers to "what should we re-estimate, and
 how often" produce five numbers between −1.27% and +0.08% over five years.
 Nothing helps. Nothing hurts. Tightening the screen from 5% to 1% cuts the book
-from 876 pairs to 278 and moves the return by six basis points. Replacing the
-fixed 60-bar z-score window with each pair's own measured half-life — the last
-open stretch goal in this file — moves it by five.
+from 876 pairs to 278 and the five-year return comes out at +0.06%. Replacing
+the fixed 60-bar z-score window with each pair's own measured half-life — the
+last open stretch goal in this file — gives −0.02%. Each is about half a point
+away from the 5% book it modifies, over five years.
 
 That is what it looks like when a signal is zero rather than mis-implemented.
 A parameter genuinely on the wrong setting shows up as a result that changes
@@ -288,9 +289,9 @@ unnecessary. That is probably the actual lesson of this project.
   docstring for why that would actually be a worse model here, not just a
   simpler one). 6 new tests in `tests/test_kalman.py`.
 - ~~**Use `half_life()` to set the z-score window per pair**~~ - done, see
-  the walk-forward section above. It moves the five-year return by five basis
-  points, which is the answer but not the interesting part: the interesting
-  part is that nothing else moved it either.
+  the walk-forward section above. The five-year return comes out at -0.02%,
+  which is the answer but not the interesting part: the interesting part is
+  that nothing else moved it either.
 - ~~**Walk-forward analysis**~~ - done, `walkforward.py`, 20 quarterly
   re-estimates over 99,000 cointegration tests. Refitting the hedge ratio,
   re-running the screen, tightening the screen and resizing the z-score
