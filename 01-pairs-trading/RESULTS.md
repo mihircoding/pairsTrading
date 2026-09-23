@@ -140,6 +140,70 @@ resulting ordering carries about as much information as a coin.
 That is a stronger statement than the ACN/LIN result, because it is made
 across 930 pairs instead of one.
 
+### The control group: trade the pairs the screen threw away
+
+Everything above describes the 930 pairs that passed. Compared to what? A
+screen that keeps 930 of 4,950 is only worth running if the 4,020 it rejected
+would have done worse, and nobody checks, because the rejects are by definition
+the ones you don't trade. `control.py` trades them anyway — same window, same
+hedge ratios from the same formation regression, same 60-day z-score, same
+2.0/0.5 thresholds, same 5bps a side. The only difference between the groups is
+which side of p = 0.05 they landed on.
+
+| | passed the screen | rejected |
+|---|---|---|
+| pairs | 930 | 4,020 |
+| mean Sharpe | −0.009 | **+0.009** |
+| median Sharpe | −0.008 | **+0.010** |
+| median total return | −3.66% | **−2.78%** |
+| share profitable | 41.8% | **45.5%** |
+| mean round trips | 20.9 | 20.5 |
+
+**The pairs that failed the cointegration test did slightly better than the
+ones that passed.** The difference in mean Sharpe is −0.018 in favour of the
+rejects, and a permutation test over 10,000 relabellings puts it at p = 0.21 —
+so the honest reading is not "the screen is backwards", it is that the two
+groups are the same group. A t-test would be the wrong tool here: each ticker
+appears in 99 pairs, so the samples overlap heavily and the usual standard
+errors are too small in the direction that flatters the screen.
+
+As books:
+
+| Book | Pairs | Total return | Sharpe |
+|---|---|---|---|
+| screened (passed) | 930 | −2.14% | −0.19 |
+| rejected | 4,020 | −1.30% | −0.10 |
+| everything | 4,950 | −1.45% | −0.12 |
+
+And the ranking question, now over the full range of the test instead of the
+tenth of it the survivors occupy — out-of-sample Sharpe by formation p-value
+decile:
+
+```
+ decile          p-value range   pairs  mean sharpe  median ret  profitable
+      1     0.0000-0.0190          495        0.011      -2.80%       43.4%
+      2     0.0190-0.0551          495       -0.039      -4.87%       39.2%
+      3     0.0551-0.1013          495        0.020      -1.15%       47.9%
+      4     0.1016-0.1631          495        0.017      -2.91%       44.8%
+      5     0.1631-0.2309          495        0.004      -2.91%       45.7%
+      6     0.2318-0.3166          495        0.015      -2.35%       46.1%
+      7     0.3166-0.4345          495        0.026      -1.14%       48.1%
+      8     0.4348-0.6024          495        0.036      -0.85%       48.5%
+      9     0.6024-0.8450          495       -0.012      -4.29%       43.4%
+     10     0.8455-1.0000          495       -0.020      -5.62%       41.2%
+```
+
+No gradient anywhere in it, and the Spearman correlation between p-value and
+out-of-sample Sharpe across all 4,950 pairs is **−0.001**. The −0.05 measured
+on the survivors alone was the interesting tenth of a flat line.
+
+This is the cleanest result in the project. The bucket table earlier shows the
+screen doesn't rank the pairs it keeps; this shows it doesn't separate the ones
+it keeps from the ones it discards either. Everything else here — the single
+pair, the Kalman filter, the quarterly refits — is an argument about how to
+trade a signal. This is the check on whether there is a signal, and it is the
+one experiment in the repo that a desk would ask for first.
+
 ### Where the book's Sharpe comes from
 
 | | |
@@ -298,6 +362,11 @@ unnecessary. That is probably the actual lesson of this project.
   window all land between -1.27% and +0.08% over five years. The finding that
   came out of it: **0 of 4,950 pairs pass the cointegration test in all 20
   quarters**, and the median pair that ever passes, passes in 4 of 20.
+- ~~**A control group**~~ - done, `control.py`. Backtests the 4,020 rejected
+  pairs under identical rules: they come out marginally ahead of the 930
+  survivors (mean Sharpe +0.009 vs -0.009), at p = 0.21 on a permutation
+  test, and the p-value/Sharpe rank correlation over all 4,950 pairs is
+  -0.001. 7 tests in `tests/test_control.py`.
 - ~~**Portfolio of pairs**~~ - done, see "Trading all of them at once"
   above and `portfolio.py`. The equal-weight book of all 930 returns
   -2.14% at a Sharpe of -0.19, 48.8% of pairs make money, and the
