@@ -28,6 +28,7 @@ Two ways of asking it, because they answer different things:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +38,7 @@ from scan import ZSCORE_WINDOW, run_pair, sharpe
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
+SITE_OUT = ROOT.parent / "docs" / "control.js"
 N_PERMUTATIONS = 10_000
 
 
@@ -152,7 +154,52 @@ def main() -> None:
               f"{int(r['pairs']):>7,} {r['mean_sharpe']:>12.3f} "
               f"{r['median_return']:>11.2%} {r['share_profitable']:>11.1%}")
 
+    payload = {
+        "n_tested": int(len(scan)), "n_passed": int(len(passed)),
+        "n_rejected": int(len(rejected)),
+        "window": [str(trading.index[0].date()), str(trading.index[-1].date())],
+        "groups": {
+            label: {
+                "pairs": int(mask.sum()),
+                "mean_sharpe": round(float(stats.loc[mask, "sharpe"].mean()), 4),
+                "median_sharpe": round(float(stats.loc[mask, "sharpe"].median()), 4),
+                "median_return": round(float(stats.loc[mask, "total_return"].median()), 5),
+                "share_profitable": round(float(
+                    (stats.loc[mask, "total_return"] > 0).mean()), 4),
+                "round_trips": round(float(stats.loc[mask, "n_round_trips"].mean()), 2),
+                "book": {k: (round(v, 5) if isinstance(v, float) else v)
+                         for k, v in book_stats(returns.loc[:, mask.to_numpy()]).items()},
+            }
+            for label, mask in (("passed", stats["passed"]),
+                                ("rejected", ~stats["passed"]))
+        },
+        "permutation": {k: round(float(v), 5) for k, v in test.items()},
+        "deciles": [{k: (round(float(v), 5) if isinstance(v, float) else int(v))
+                     for k, v in row.items()} for row in table.to_dict("records")],
+        # Sharpe histograms, same bins for both groups so the chart overlays
+        "histogram": None,
+    }
+    edges = np.histogram_bin_edges(stats["sharpe"], bins=36,
+                                   range=(-1.5, 1.5))
+    payload["histogram"] = {
+        "edges": [round(float(e), 3) for e in edges],
+        "passed": [int(n) for n in np.histogram(
+            stats.loc[stats["passed"], "sharpe"], bins=edges)[0]],
+        "rejected": [int(n) for n in np.histogram(
+            stats.loc[~stats["passed"], "sharpe"], bins=edges)[0]],
+    }
+
     rho = stats["pvalue"].corr(stats["sharpe"], method="spearman")
+    payload["spearman"] = round(float(rho), 4)
+    payload["book_all"] = {k: (round(v, 5) if isinstance(v, float) else v)
+                           for k, v in book_stats(returns).items()}
+
+    if SITE_OUT.parent.exists():
+        SITE_OUT.write_text(
+            "window.CONTROL = " + json.dumps(payload, separators=(",", ":")) + ";\n",
+            encoding="utf-8")
+        print(f"\nwrote {SITE_OUT} ({SITE_OUT.stat().st_size / 1024:.0f} KB)")
+
     print(f"\nSpearman correlation, formation p-value vs out-of-sample Sharpe, "
           f"all pairs: {rho:+.3f}")
     print("A screen that works would make this strongly negative: lower p-value,")

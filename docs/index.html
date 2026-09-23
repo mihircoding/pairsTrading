@@ -99,6 +99,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
   <p class="lede">A cointegration screen run across every pair in the S&amp;P 100, then traded on data it was never selected on. <strong style="color:var(--ink)">930 of 4,950 pairs passed the statistical test. Out of sample they averaged a Sharpe ratio of &minus;0.009.</strong></p>
   <div class="links">
     <a class="btn primary" href="#explorer">Explore the data</a>
+    <a class="btn" href="#control">The control group</a>
     <a class="btn" href="https://github.com/mihircoding/pairsTrading/tree/main/01-pairs-trading">Source on GitHub</a>
     <a class="btn" href="https://github.com/mihircoding/pairsTrading/blob/main/01-pairs-trading/src/pairs.ipynb">Notebook</a>
   </div>
@@ -224,6 +225,47 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 
   <div class="note blue">
     <p><strong>And it isn't 930 independent bets.</strong> 930 pairs drawn from 100 tickers is 1,860 legs over 100 names. The most-used leg is <span id="p-topleg">&mdash;</span>. A book like this is a handful of concentrated single-name positions wearing 930 labels &mdash; the small &rho; above is small mostly because the legs point in different directions, not because the bets are unrelated.</p>
+  </div>
+</div>
+</section>
+
+<section id="control">
+<div class="wrap">
+  <div class="eyebrow">Control group</div>
+  <h2>Now trade the 4,020 pairs the screen threw away</h2>
+  <p class="lede">Every number on this page so far describes the 930 pairs that passed. Compared to <em>what?</em> A screen that keeps 930 of 4,950 is only worth running if the 4,020 it rejected would have done worse &mdash; and nobody checks, because the rejects are by definition the ones you don't trade. <span class="mono">control.py</span> trades them anyway, under identical rules. The only difference between the two groups is which side of p = 0.05 they landed on.</p>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>Out-of-sample Sharpe, both groups</h3>
+      <div class="chart"><canvas id="c-ctrl-hist"></canvas></div>
+      <p class="cap">Share of each group at each Sharpe, so the 930 and the 4,020 are comparable. Two distributions, same shape, same centre.</p>
+    </div>
+    <div>
+      <div class="scroll"><table id="t-ctrl"><thead><tr><th></th><th class="n">Passed</th><th class="n">Rejected</th></tr></thead><tbody></tbody></table></div>
+      <p style="margin-top:14px"><strong style="color:var(--ink)">The pairs that failed the cointegration test did slightly better.</strong> The gap in mean Sharpe is <span class="mono" id="x-diff">&mdash;</span> in favour of the rejects, and a permutation test over 10,000 relabellings puts it at <span class="mono" id="x-pval">&mdash;</span> &mdash; so the reading is not that the screen is backwards. It is that the two groups are one group.</p>
+      <p>A t-test would be the wrong tool: each ticker appears in 99 pairs, so the samples overlap heavily and the usual standard errors come out too small in exactly the direction that flatters the screen. Shuffling the labels makes no assumption at all.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:34px">And the ranking question, over the full range of the test</h3>
+  <div class="grid2">
+    <div class="panel">
+      <div class="chart" style="height:280px"><canvas id="c-ctrl-dec"></canvas></div>
+      <p class="cap">Mean out-of-sample Sharpe by formation p-value decile, all 4,950 pairs. The first decile is the strongest cointegration evidence the test produced; the tenth is the weakest.</p>
+    </div>
+    <div>
+      <p>No gradient anywhere in it. The Spearman correlation between the formation p-value and out-of-sample Sharpe across all 4,950 pairs is <span class="mono" id="x-rho">&mdash;</span>.</p>
+      <p>The &minus;0.05 quoted further up this page was measured on the survivors alone &mdash; the interesting-looking tenth of a flat line.</p>
+      <div class="cards" style="margin-top:16px">
+        <div class="card"><div class="k">Book of the 930 that passed</div><div class="v red" id="x-bookpass">&mdash;</div><div class="s" id="x-bookpass-s">&mdash;</div></div>
+        <div class="card"><div class="k">Book of the 4,020 rejected</div><div class="v" id="x-bookrej">&mdash;</div><div class="s" id="x-bookrej-s">&mdash;</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><strong>This is the experiment a desk asks for first, and most pairs-trading projects never run it.</strong> The bucket table earlier shows the screen doesn't rank the pairs it keeps. This shows it doesn't separate the ones it keeps from the ones it discards either. Everything else on this page is an argument about how to trade a signal; this is the check on whether there is one.</p>
   </div>
 </div>
 </section>
@@ -389,6 +431,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 <script src="data.js"></script>
 <script src="portfolio.js"></script>
 <script src="walkforward.js"></script>
+<script src="control.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 const D = window.DATA, S = D.summary, M = D.meta;
@@ -654,6 +697,66 @@ draw(); renderTable();
       <td class="n">${fmtPct(r.max_drawdown)}</td>
       <td class="n">${(r.ann_vol*100).toFixed(2)}%</td></tr>`;
   }).join('');
+})();
+
+
+/* ---------- control group (control.py) ---------- */
+(function () {
+  const K = window.CONTROL;
+  if (!K) return;
+  const g = K.groups, pa = g.passed, re = g.rejected;
+  const sh = x => (x >= 0 ? '+' : '\u2212') + Math.abs(x).toFixed(3);
+  const pc = v => (v * 100).toFixed(1) + '%';
+
+  document.querySelector('#t-ctrl tbody').innerHTML = [
+    ['Pairs', pa.pairs.toLocaleString(), re.pairs.toLocaleString()],
+    ['Mean Sharpe', sh(pa.mean_sharpe), '<strong>' + sh(re.mean_sharpe) + '</strong>'],
+    ['Median Sharpe', sh(pa.median_sharpe), '<strong>' + sh(re.median_sharpe) + '</strong>'],
+    ['Median total return', fmtPct(pa.median_return), '<strong>' + fmtPct(re.median_return) + '</strong>'],
+    ['Share profitable', pc(pa.share_profitable), '<strong>' + pc(re.share_profitable) + '</strong>'],
+    ['Mean round trips', pa.round_trips.toFixed(1), re.round_trips.toFixed(1)],
+  ].map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td></tr>`).join('');
+
+  $('x-diff').textContent = sh(K.permutation.difference);
+  $('x-pval').textContent = 'p = ' + K.permutation.p_value.toFixed(2);
+  $('x-rho').textContent = sh(K.spearman);
+  $('x-bookpass').textContent = fmtPct(pa.book.total_return);
+  $('x-bookpass-s').textContent = 'Sharpe ' + pa.book.sharpe.toFixed(2);
+  $('x-bookrej').textContent = fmtPct(re.book.total_return);
+  $('x-bookrej-s').textContent = 'Sharpe ' + re.book.sharpe.toFixed(2);
+
+  const h = K.histogram;
+  const mid = h.edges.slice(0, -1).map((e, i) => (e + h.edges[i + 1]) / 2);
+  const share = (counts, n) => counts.map(v => v / n * 100);
+  new Chart($('c-ctrl-hist'), {type:'bar', data:{
+    labels: mid.map(v => v.toFixed(2)),
+    datasets:[
+      {label:`passed the screen (${pa.pairs.toLocaleString()})`,
+       data: share(h.passed, pa.pairs), backgroundColor: css('--blue') + 'aa', borderWidth:0},
+      {label:`rejected (${re.pairs.toLocaleString()})`,
+       data: share(h.rejected, re.pairs), backgroundColor: css('--ink3') + '77', borderWidth:0}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{boxWidth:10, boxHeight:10, padding:12}},
+               tooltip:{callbacks:{title:i => 'Sharpe ' + i[0].label,
+                                   label:c => c.dataset.label.split(' (')[0] + ': ' + c.parsed.y.toFixed(1) + '% of group'}}},
+      scales:{x:{title:{display:true, text:'out-of-sample Sharpe'}, grid:{display:false},
+                 ticks:{maxTicksLimit:9}, stacked:false},
+              y:{title:{display:true, text:'% of group'}, ticks:{callback:v => v + '%'}}}}});
+
+  new Chart($('c-ctrl-dec'), {type:'bar', data:{
+    labels: K.deciles.map(d => d.decile + 1),
+    datasets:[{data: K.deciles.map(d => d.mean_sharpe),
+               backgroundColor: K.deciles.map(d => d.mean_sharpe >= 0 ? css('--green') : css('--red')),
+               borderRadius:2}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+               tooltip:{callbacks:{title:i => 'decile ' + i[0].label,
+                                   label:c => 'mean Sharpe ' + c.parsed.y.toFixed(3)}}},
+      scales:{x:{title:{display:true, text:'formation p-value decile (1 = strongest evidence)'},
+                 grid:{display:false}},
+              y:{title:{display:true, text:'mean out-of-sample Sharpe'},
+                 ticks:{callback:v => v.toFixed(2)}}}}});
 })();
 
 
