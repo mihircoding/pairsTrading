@@ -334,14 +334,135 @@ sectors, factors and a market. The claim is narrower. That structure is not
 stable at the pair level, on this horizon, at a strength this screen can find,
 and none of the standard fixes change that.
 
+### Is the screen's p-value a p-value?
+
+Everything above takes the screen's own arithmetic at face value and shows
+the arithmetic does not pay. This asks the question underneath it: is the
+number being thresholded the thing it claims to be?
+
+The screen does what nearly every pairs tutorial does. Regress one log price
+on the other, take the residual, run an augmented Dickey-Fuller test on it:
+
+```
+beta   = OLS(y ~ x)
+spread = y - a - beta * x
+p      = adfuller(spread).pvalue
+```
+
+**The residual is not data.** It is the output of a regression chosen to make
+that residual as small as possible, so it looks more stationary than a series
+of the same statistical character would — the fit has already spent some of
+the wandering. Dickey-Fuller's tables were computed for a series nobody fitted
+anything to. This is exactly why Engle and Granger, and then Phillips and
+Ouliaris, published *separate* critical values for the case where beta is
+estimated, and why statsmodels ships `coint()` alongside `adfuller()`.
+
+`screen_validity.py` measures what that costs, starting with the only
+definition of a test's size that needs no theory: feed it pairs of independent
+random walks, where there is nothing to find, and count how often it says
+there is.
+
+```
+test                                         rejects at 5%    at 1%
+adfuller on the OLS residual (the screen)           15.3%     4.5%
+Engle-Granger critical values (coint)                5.7%     1.1%
+                                   (2,000 simulated pairs, 1,384 observations)
+```
+
+**A test labelled 5% rejects 15.3% of the time on data with nothing in it.**
+Three times its nominal size. The screen's `p < 0.05` is, in truth, roughly
+`p < 0.011`.
+
+Re-running all 4,950 real pairs through the correct table:
+
+```
+passed the screen as written         930  (18.8%)
+pass with the right table            541  (10.9%)
+pass both                            486
+rank correlation of the two p-values  0.909
+```
+
+**Four hundred of the 930 were an artefact of the wrong lookup table**, and the
+two p-values rank pairs almost identically (0.91), so nothing above changes
+qualitatively — the screen was reading the same evidence, just calling more of
+it significant than it was.
+
+Then multiple testing on top, on the corrected p-values:
+
+```
+estimated share of pairs with nothing there    73.7%
+expected false positives at a flat 5%            182
+survive Benjamini-Hochberg at FDR 5%               8
+survive Benjamini-Hochberg at FDR 10%             17
+survive Benjamini-Hochberg at FDR 20%             41
+survive Bonferroni                                 1
+```
+
+**Seventeen.** Of 4,950 pairs, seventeen clear a false-discovery rate of 10%.
+This project has been trading 930. Bonferroni's answer of one was already in
+`meta.json` and is easy to dismiss as too blunt to be useful — it asks whether
+*any* of the discoveries might be false. Benjamini-Hochberg asks the question
+with money attached: of the pairs I take, what share are noise? A book where
+one pair in ten is noise is still a business. A book where 98% of it is noise
+is not, and that is what 17-out-of-930 says.
+
+### This corrects a number stated earlier in this document
+
+The quarterly re-estimation section above notes that 651 to 1,555 pairs pass
+per quarter "against the ~248 that pure chance predicts", and reads the excess
+as evidence of genuine common structure in the universe. That 248 is
+4,950 × 5% — the nominal size. The measured size is 15.3%, so **chance predicts
+about 757 passes per quarter, not 248**, and the median quarter's 799 is barely
+above it.
+
+The claim that there is real shared structure among 100 large-cap US stocks is
+still true — they share sectors, factors and a market, and nobody needs a
+cointegration test to know that. What is not true is that the pass counts were
+evidence of it. They were mostly the test's own mis-sizing, and the paragraph
+above overstated the case by roughly a factor of three. It is left standing
+with this correction attached rather than quietly edited, because the mistake
+is the more useful artefact: the nominal size of a test is an assumption, and
+this one had never been checked against the procedure that was actually run.
+
+### And fixing the statistics does not rescue the strategy
+
+The tempting conclusion is that the screen was reading the wrong table and the
+seventeen survivors are the real pairs. They are not. Same trading window, same
+rules, same costs:
+
+```
+group                             pairs  mean sharpe  book sharpe
+survive BH at 10%                    17        -0.03        -0.19
+passed the old screen, not BH       913        -0.01        -0.19
+rejected by the old screen        4,020         0.01        -0.10
+```
+
+**The seventeen best-evidenced pairs in the universe trade no better than the
+4,020 the screen threw away.** This is the control-group result again, at the
+other end of the evidence scale: the earlier section showed the screen cannot
+rank within the pairs it kept, and this shows that making the screen
+statistically correct — and then demanding far more of it — still selects
+nothing that trades.
+
+Which is the cleanest statement of what this project found. The screen had two
+separate problems: it was mis-sized, so it kept three times as many pairs as
+its own threshold implied; and the property it tests for, even measured
+correctly, does not survive into the next five years at a strength worth
+trading. Fixing the first does not touch the second. That is worth knowing
+before building anything on top of a cointegration screen, and it is not what
+the tutorials say.
+
 ### What would be next, and why it isn't more refitting
 
-Having ruled out the estimation schedule, the remaining candidates are the
-data and the universe rather than the method: point-in-time index membership
-(the survivorship caveat below is real and unaddressed), intraday rather than
-daily bars, and a universe chosen by economic relationship rather than by
-running every pair through a test. All three are ways of making the *screen*
-unnecessary. That is probably the actual lesson of this project.
+Having ruled out the estimation schedule, and now the screen's own statistics,
+the remaining candidates are the data and the universe rather than the method:
+point-in-time index membership (the survivorship caveat below is real and
+unaddressed), intraday rather than daily bars, and a universe chosen by
+economic relationship rather than by running every pair through a test. All
+three are ways of making the *screen* unnecessary. That is probably the actual
+lesson of this project, and the size measurement above is the sharpest version
+of it: the screen was not merely unhelpful, it was miscalibrated by a factor of
+three, and correcting it changed nothing about what trades.
 
 ## Stretch goals
 
