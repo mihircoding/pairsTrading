@@ -100,6 +100,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
   <div class="links">
     <a class="btn primary" href="#explorer">Explore the data</a>
     <a class="btn" href="#control">The control group</a>
+    <a class="btn" href="#validity">Is the 5% really 5%?</a>
     <a class="btn" href="https://github.com/mihircoding/pairsTrading/tree/main/01-pairs-trading">Source on GitHub</a>
     <a class="btn" href="https://github.com/mihircoding/pairsTrading/blob/main/01-pairs-trading/src/pairs.ipynb">Notebook</a>
   </div>
@@ -270,6 +271,48 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 </div>
 </section>
 
+<section id="validity">
+<div class="wrap">
+  <div class="eyebrow">The screen itself</div>
+  <h2>Is the screen&rsquo;s 5% really 5%?</h2>
+  <p class="lede">Everything above takes the cointegration screen&rsquo;s arithmetic at face value and shows the arithmetic doesn&rsquo;t pay. This checks the arithmetic. <span class="mono">screen_validity.py</span> regenerates every number here.</p>
+
+  <p>The screen does what nearly every pairs-trading tutorial does: regress one log price on the other, take the residual, run an augmented Dickey&ndash;Fuller test on it. <strong style="color:var(--ink)">The residual is not data.</strong> It is the output of a regression chosen to make it as small as possible, so it looks more stationary than a series of the same character would &mdash; the fit has already spent some of the wandering. Dickey&ndash;Fuller&rsquo;s tables were computed for a series nobody fitted anything to. That is why Engle&ndash;Granger and Phillips&ndash;Ouliaris published separate critical values, and why <span class="mono">statsmodels</span> ships <span class="mono">coint()</span> next to <span class="mono">adfuller()</span>.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Screen&rsquo;s true size</div><div class="v red" id="v-size">&mdash;</div><div class="s">on data with nothing in it</div></div>
+    <div class="card"><div class="k">Correct test&rsquo;s size</div><div class="v" id="v-size2">&mdash;</div><div class="s">what 5% is supposed to look like</div></div>
+    <div class="card"><div class="k">&ldquo;p &lt; 0.05&rdquo; really means</div><div class="v" id="v-thresh">&mdash;</div><div class="s">for a true 5% test</div></div>
+    <div class="card"><div class="k">Pass with the right table</div><div class="v" id="v-pass">&mdash;</div><div class="s" id="v-pass-s">&mdash;</div></div>
+    <div class="card"><div class="k">Survive FDR 10%</div><div class="v red" id="v-bh">&mdash;</div><div class="s">of 4,950 &mdash; this project trades 930</div></div>
+    <div class="card"><div class="k">Survive Bonferroni</div><div class="v" id="v-bonf">&mdash;</div><div class="s">the blunt version of the same point</div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:26px">
+    <div class="panel">
+      <h3>Size, measured rather than assumed</h3>
+      <div class="scroll"><table id="t-size"><thead><tr><th>Test</th><th class="n">Rejects at 5%</th><th class="n">at 1%</th></tr></thead><tbody></tbody></table></div>
+      <p style="margin-top:14px">The only definition of a test&rsquo;s size that needs no theory: feed it <span id="v-nsim">&mdash;</span> pairs of independent random walks, where there is nothing to find by construction, and count how often it says there is. <strong style="color:var(--ink)">A test labelled 5% fires <span id="v-size3">&mdash;</span> of the time.</strong></p>
+    </div>
+    <div class="panel">
+      <h3>The two p-values across all 4,950 pairs</h3>
+      <div class="chart"><canvas id="c-val-hist"></canvas></div>
+      <p class="cap">If the screen were correctly sized these would lie on top of each other. The naive version piles up against zero; the corrected one is much closer to the flat line a mostly-null universe should produce.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><strong>This corrects a number stated further up this page.</strong> The walk-forward section reads 651&ndash;1,555 passes per quarter against &ldquo;the ~248 that pure chance predicts&rdquo; as evidence of genuine structure. That 248 is 4,950 &times; 5% &mdash; the <em>nominal</em> size. The measured size is <span class="mono" id="v-size4">&mdash;</span>, so chance predicts about <span class="mono" id="v-expected">&mdash;</span> passes a quarter, and the median quarter&rsquo;s 799 is barely above it. The claim that 100 large-cap US stocks share real structure is still true; the claim that the pass counts were evidence of it is not. The paragraph is left standing with this correction attached rather than quietly edited.</p>
+  </div>
+
+  <div class="panel" style="margin-top:26px">
+    <h3>And fixing the statistics does not rescue the strategy</h3>
+    <div class="scroll"><table id="t-val-trade"><thead><tr><th>Group</th><th class="n">Pairs</th><th class="n">Mean Sharpe</th><th class="n">Book Sharpe</th></tr></thead><tbody></tbody></table></div>
+    <p style="margin-top:14px">The tempting conclusion is that the screen was reading the wrong table and the survivors are the real pairs. <strong style="color:var(--ink)">The seventeen best-evidenced pairs in the universe trade no better than the 4,020 the screen threw away.</strong> The screen had two separate problems &mdash; it was miscalibrated by a factor of three, and the property it tests for does not survive into the next five years at a strength worth trading. Fixing the first does not touch the second.</p>
+  </div>
+</div>
+</section>
+
 <section>
 <div class="wrap">
   <div class="eyebrow">Walk-forward</div>
@@ -432,6 +475,7 @@ footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--ink3);fo
 <script src="portfolio.js"></script>
 <script src="walkforward.js"></script>
 <script src="control.js"></script>
+<script src="validity.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 const D = window.DATA, S = D.summary, M = D.meta;
@@ -697,6 +741,60 @@ draw(); renderTable();
       <td class="n">${fmtPct(r.max_drawdown)}</td>
       <td class="n">${(r.ann_vol*100).toFixed(2)}%</td></tr>`;
   }).join('');
+})();
+
+
+/* ---------- screen validity (screen_validity.py) ---------- */
+(function () {
+  const V = window.VALIDITY;
+  if (!V) return;
+  const pc1 = v => (v * 100).toFixed(1) + '%';
+  const sh = x => (x >= 0 ? '+' : '\u2212') + Math.abs(x).toFixed(3);
+  const z = V.size;
+
+  $('v-size').textContent = pc1(z.naive_size);
+  $('v-size2').textContent = pc1(z.proper_size);
+  $('v-size3').textContent = pc1(z.naive_size);
+  $('v-size4').textContent = pc1(z.naive_size);
+  $('v-thresh').textContent = 'p < ' + z.honest_threshold.toFixed(3);
+  $('v-pass').textContent = V.proper_pass.toLocaleString();
+  $('v-pass-s').textContent = V.naive_pass.toLocaleString() + ' passed as written';
+  $('v-bh').textContent = V.bh['0.10'];
+  $('v-bonf').textContent = V.bonferroni;
+  $('v-nsim').textContent = z.n_sim.toLocaleString();
+  $('v-expected').textContent = Math.round(z.naive_size * V.n_pairs).toLocaleString();
+
+  document.querySelector('#t-size tbody').innerHTML = [
+    ['adfuller on the OLS residual (the screen)', z.naive_size, z.naive_size_1pct, true],
+    ['Engle&ndash;Granger critical values (coint)', z.proper_size, z.proper_size_1pct, false],
+  ].map(r => `<tr><td>${r[0]}</td><td class="n${r[3] ? ' neg' : ''}">${pc1(r[1])}</td>` +
+             `<td class="n${r[3] ? ' neg' : ''}">${pc1(r[2])}</td></tr>`).join('');
+
+  document.querySelector('#t-val-trade tbody').innerHTML =
+    Object.entries(V.trading).map(([name, r]) =>
+      `<tr><td>${name}</td><td class="n">${r.n.toLocaleString()}</td>` +
+      `<td class="n ${r.mean_sharpe >= 0 ? 'pos' : 'neg'}">${sh(r.mean_sharpe)}</td>` +
+      `<td class="n ${r.book_sharpe >= 0 ? 'pos' : 'neg'}">${sh(r.book_sharpe)}</td></tr>`).join('');
+
+  const h = V.hist;
+  const mid = h.edges.slice(0, -1).map((e, i) => (e + h.edges[i + 1]) / 2);
+  const share = c => c.map(v => v / V.n_pairs * 100);
+  new Chart($('c-val-hist'), {type:'bar', data:{
+    labels: mid.map(v => v.toFixed(2)),
+    datasets:[
+      {label:'adfuller on the residual', data: share(h.naive),
+       backgroundColor: css('--red') + 'aa', borderWidth:0},
+      {label:'Engle-Granger', data: share(h.proper),
+       backgroundColor: css('--blue') + '99', borderWidth:0}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{boxWidth:10, boxHeight:10, padding:12}},
+               tooltip:{callbacks:{title:i => 'p \u2248 ' + i[0].label,
+                                   label:c => c.dataset.label + ': ' + c.parsed.y.toFixed(1) + '% of pairs'}}},
+      scales:{x:{title:{display:true, text:'formation p-value'}, grid:{display:false},
+                 ticks:{maxTicksLimit:9}},
+              y:{title:{display:true, text:'% of all 4,950 pairs'},
+                 ticks:{callback:v => v + '%'}}}}});
 })();
 
 

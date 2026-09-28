@@ -58,6 +58,7 @@ from universe import TICKERS
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
+SITE_OUT = ROOT.parent / "docs" / "validity.js"
 ALPHA = 0.05
 N_SIM = 2_000
 SIM_SEED = 20260928
@@ -192,6 +193,26 @@ def trade_survivors(rechecked: pd.DataFrame, q: float = 0.10) -> dict:
     return out
 
 
+def write_site(payload: dict, rechecked: pd.DataFrame) -> None:
+    """docs/validity.js, the way control.py writes docs/control.js.
+
+    The page gets the p-value histograms as well as the summary, because the
+    shape is the argument: if the screen were correctly sized, the naive and
+    corrected histograms would sit on top of each other.
+    """
+    edges = np.linspace(0.0, 1.0, 21)
+    payload = dict(payload)
+    payload["hist"] = {
+        "edges": [round(float(e), 3) for e in edges],
+        "naive": [int(v) for v in np.histogram(rechecked["pvalue"], bins=edges)[0]],
+        "proper": [int(v) for v in np.histogram(rechecked["eg_pvalue"], bins=edges)[0]],
+    }
+    SITE_OUT.parent.mkdir(exist_ok=True)
+    SITE_OUT.write_text("window.VALIDITY = " + json.dumps(payload,
+                        separators=(",", ":")) + ";\n", encoding="utf-8")
+    print(f"wrote {SITE_OUT}")
+
+
 def main() -> None:
     scan = pd.read_parquet(RESULTS / "scan.parquet")
     prices = clean(load_prices(TICKERS, *FORMATION), MIN_FORMATION_DAYS)
@@ -258,6 +279,7 @@ def main() -> None:
         "n_obs": n_obs,
     }
     (RESULTS / "screen_validity.json").write_text(json.dumps(payload, indent=2))
+    write_site(payload, rechecked)
     rechecked[["a", "b", "pvalue", "eg_pvalue"]].to_parquet(
         RESULTS / "screen_validity.parquet", index=False)
     print(f"\nwrote results/screen_validity.json and .parquet")
