@@ -494,10 +494,140 @@ three, and correcting it changed nothing about what trades.
   formation p-value's rank correlation with out-of-sample Sharpe is
   -0.05. 17 tests in `tests/test_portfolio.py`.
 
+## Survivorship, measured and bounded instead of admitted
+
+Every page of this project has carried the same warning: the universe is the S&P 100 **as it
+stands today**, membership is awarded for having already grown large, and firms that were in the
+index and then collapsed or were bought are simply absent. The warning always ended by saying the
+fix needs a point-in-time constituent list, which free data does not provide.
+
+That is true - Yahoo returns nothing for MON, TWX, CELG, RTN, ATVI or any of the thirty-odd other
+large caps that left the index in this window; delisted tickers are gone, and the ones that still
+resolve have been recycled onto different companies. It is also not a reason to leave the size of
+the bias unstated, because an unmeasured caveat is indistinguishable from a large one.
+`survivorship.py` does what can be done without the data that does not exist, in two directions.
+
+### What the selection actually looks like
+
+```
+  median surviving name's formation return        96%
+  mean                                            200%
+  SPY over the same window                       100%
+  share of the universe that beat it              48%
+  worst / best                                   -52% / 3636%
+```
+
+Not what I expected to find, and worth stating plainly: **the median surviving name roughly
+matched SPY, and fewer than half of them beat it.** That comparison is close to circular anyway -
+SPY is cap-weighted and largely made of these same companies. The mean is 200% because of the
+right tail; one name returned 3,636%.
+
+The tell is the **minimum**. The worst ten-year outcome in this list is GE at -52%. A genuine 2013
+large-cap universe followed to 2025 contains companies that went to zero, were acquired at a
+premium, or shrank out of the index entirely, and none of those is here. Survivorship bias in this
+universe is not mainly a story about the average being too high. It is a story about the left tail
+being absent, which matters because the left tail is the only part of the distribution a
+market-neutral strategy has no defence against.
+
+### Does the screen pass co-winners more often? Yes, by a third
+
+Two stocks that both tripled between 2013 and 2020 share a strong upward trend, and a common trend
+is exactly what makes an ADF test on a fitted residual reject when it should not - which the
+screen-validity section already showed it does, three times too often. So: bucket all 4,950 pairs
+by formation-window return, each pair taking its *weaker* leg's quartile, so "top quartile" means
+both legs were top-quartile winners.
+
+```
+both legs at least     pairs  pass rate  median p  mean formation ret
+0%-25%                 2,175      17.9%     0.276                -1%
+25%-50%                1,550      18.6%     0.197                73%
+50%-75%                  925      19.5%     0.227               146%
+75%-100%                 300      24.0%     0.199               583%
+```
+
+Monotone, and a 34% relative increase from bottom bucket to top. Some of the 930 survivors is
+selection rather than structure, and this is how much.
+
+Then the part that makes it matter:
+
+```
+bucket                 pairs  mean sharpe   median  profitable
+quartile 1               389       -0.091   -0.081       34.4%
+quartile 2               289        0.063    0.036       48.8%
+quartile 3               180        0.082    0.075       52.8%
+quartile 4                72       -0.084   -0.146       26.4%
+```
+
+**The bucket the screen likes most is the one that trades worst.** Top-quartile co-winners pass at
+24% and are profitable out of sample 26% of the time, against 53% for the third quartile. Passing
+because you both went up is not the same as passing because you are tethered, and the out-of-sample
+window is where the difference shows up.
+
+### What a leg being acquired would cost, since none ever is
+
+The event a survivors-only universe can never contain is a takeover. A target gaps to near the
+offer price in one print, stops moving, then delists - so a cointegrated spread jumps and never
+mean-reverts, and a strategy that makes small money on reversion has nothing that caps a gap.
+
+There is no way to observe those events in this universe. There is a way to inject them at a stated
+rate and measure what they cost. Each trial draws a Poisson number of acquisitions across the 100
+names, gaps the target, holds it flat for five months, then delists it.
+
+Three things had to be got right or the measurement flatters itself, and they are worth listing
+because the naive version of this table says takeovers are *profitable*:
+
+- **The window is matched.** A takeover truncates its leg's history; this book loses money, so an
+  affected pair trading fewer days looks better for a reason that has nothing to do with the
+  merger. Every delta scores the real prices over exactly the dates the modified history had.
+- **Pairs killed outright are excluded from the deltas.** A pair that cannot trade earns zero, and
+  zero beats this book's average pair. Counted separately.
+- **Untouched pairs must be unchanged.** Otherwise the comparison is measuring the random number
+  generator. Tested in `tests/test_survivorship.py`.
+
+```
+ premium  deals/yr  deals  % of book   median     mean   5th pct     worst  lost >10%
+    20%      0.5%    1.7         3%    0.80%    0.41%   -14.90%   -30.37%        15%
+    20%      1.0%    4.9         9%    0.64%    1.23%   -15.10%   -39.34%        15%
+    20%      2.0%    9.4        17%    0.67%    0.74%   -15.17%   -47.68%        12%
+    20%      4.0%   17.7        31%    0.16%    0.44%   -16.48%   -44.36%        16%
+    30%      0.5%    1.7         3%    0.17%    0.22%   -19.01%   -35.59%        23%
+    30%      1.0%    4.9         9%    0.84%    1.27%   -20.21%   -48.06%        22%
+    30%      2.0%    9.4        17%    0.69%    0.94%   -18.39%   -48.72%        18%
+    30%      4.0%   17.7        31%    0.22%    0.62%   -20.58%   -49.63%        23%
+```
+
+Read the median against the 5th percentile, because they say different things. **A takeover is not
+a drag.** The strategy is short one leg and long the other and flips between them, so a gap is
+about as likely to land your way as against you, and the median affected pair moves less than a
+percent. What it is is a **tail**: the bottom twentieth of affected pairs lose 15-21% of their
+value, the worst single pair loses about half, and between 12% and 23% of affected pairs lose more
+than 10%. At a plausible 1-2% annual deal rate, 9-17% of this book holds a name that gets acquired
+somewhere in the five years.
+
+The rate and the premium are external estimates - roughly 1-2 of a hundred large caps a year
+leaving for a deal, at a 20-30% premium - and the grid exists so the conclusion does not rest on
+one cell. It does not: every row says the same thing about the shape.
+
+**For a book whose per-pair edge is already indistinguishable from zero, a risk shaped like that is
+the whole story.** The strategy has no source of return large enough to pay for a left tail it
+cannot see, and this universe cannot contain a single instance of one.
+
+### What this still does not fix
+
+Nothing here is a point-in-time universe. The 100 names are still the 2025 list, the screen is
+still run on ten years of their history, and the injected deals land on names chosen at random
+rather than on the ones that would really have been bought. What has changed is that the caveat now
+has numbers next to it in both directions - how much of the pass rate is selection, and how big the
+unobservable tail is - instead of a sentence saying it exists.
+
 ## Caveats (unchanged by any of the above)
 
 - **Survivorship bias**: the universe is the S&P 100 as it stands today, so
-  the scan asks how today's winners behaved on their way to winning.
+  the scan asks how today's winners behaved on their way to winning. Still
+  true, and now measured rather than only admitted - see the survivorship
+  section above for how much of the pass rate is selection (a third, from
+  bottom quartile to top) and how large the unobservable takeover tail is
+  (the bottom twentieth of affected pairs lose 15-21%).
 - Prices are Yahoo Finance `Close` (auto-adjusted) - fine for research,
   not for anything live.
 - Transaction costs are modeled as a flat 5bps per side; nothing here is
