@@ -1,3 +1,14 @@
+> **This project has moved.** The cointegration screen and its pair backtest are
+> now the `sleeves/statarb/` half of
+> **[Alpha to Allocation](https://github.com/mihircoding/portfolioOptimization)**,
+> where the risk allocator sizes this sleeve against a volatility-carry sleeve.
+> Full history came across; nothing here is lost. The write-up that used to be
+> this repository's RESULTS.md is at
+> [notes/statarb.md](https://github.com/mihircoding/portfolioOptimization/blob/main/notes/statarb.md),
+> and the new cross-sleeve result is in
+> [RESULTS.md](https://github.com/mihircoding/portfolioOptimization/blob/main/RESULTS.md).
+> This copy is kept read-only so existing links keep working.
+
 # Pairs Trading
 
 **[Live site &rarr;](https://mihircoding.github.io/pairsTrading/)** — the full scan, every surviving pair, and a browser-side backtest you can re-run with your own parameters.
